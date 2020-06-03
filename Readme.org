@@ -1,0 +1,33 @@
+#+TITLE: org-latex-instant-preview
+=Org-latex-instant-preview= provides instant preview of LaTeX snippets via MathJax outputed SVG.
+* Dependencies
+  - [[https://github.com/mathjax/MathJax-node][MathJax-node]]
+  - [[https://github.com/mathjax/mathjax-node-cli/][MathJax-node-cli]]
+  - [[https://github.com/tumashu/posframe][posframe]]
+
+* Installation
+  You can install =MathJax-node-cli= via ~npm~:
+  #+BEGIN_SRC shell
+npm install mathjax-node-cli
+  #+END_SRC
+  You need to set ~org-latex-instant-preview-tex2svg-bin~ to the location of the executable ~tex2svg~.
+
+* Usage
+
+** Start Instant Preview
+   #+BEGIN_SRC emacs-lisp
+(org-latex-instant-preview-send-latex)
+   #+END_SRC
+
+** Stop Instant Preview
+   #+BEGIN_SRC emacs-lisp
+(org-latex-instant-preview-stop)
+   #+END_SRC
+
+* Customization
+
+** Delay Time Before Re-compilation
+   Custom ~org-latex-instant-preview-delay~ to change the number of seconds to wait before re-compilation after Emacs is idle.
+
+** Location of ~tex2svg~ Executable
+   ~org-latex-instant-preview-tex2svg-bin~
