@@ -1,6 +1,7 @@
 #+TITLE: org-latex-instant-preview
 =Org-latex-instant-preview= provides instant preview of LaTeX snippets via MathJax outputed SVG. Unlike [[https://github.com/fuxialexander/emacs-webkit-katex-render][webkit-katex-render]], this does not need xwidget support.
 * Dependencies
+  - [[https://github.com/Malabarba/names][Names]]
   - [[https://github.com/mathjax/MathJax-node][MathJax-node]]
   - [[https://github.com/mathjax/mathjax-node-cli/][MathJax-node-cli]]
   - [[https://github.com/tumashu/posframe][posframe]]
@@ -13,6 +14,14 @@ npm install mathjax-node-cli
   You need to set ~org-latex-instant-preview-tex2svg-bin~ to the location of the executable ~tex2svg~.
 
 * Usage
+  #+BEGIN_SRC emacs-lisp
+(use-package org-latex-instant-preview
+  :defer t
+  :init
+  (setq org-latex-instant-preview-tex2svg-bin
+        ;; location of tex2svg executable
+        "~/node_modules/mathjax-node-cli/bin/tex2svg"))
+  #+END_SRC
 
 ** Start Instant Preview
    Put your cursur in some LaTeX fragment or some math environments, and invoke

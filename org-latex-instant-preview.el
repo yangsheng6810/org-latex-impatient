@@ -39,7 +39,7 @@
   :group 'org-latex-instant-preview
   :type '(number))
 
-(defconst -output-buffer "* org-latex-instant-preview-output-buffer *"
+(defconst -output-buffer "*org-latex-instant-preview-output-buffer*"
   "Buffer to hold the preview.")
 
 (defvar -need-update nil)
