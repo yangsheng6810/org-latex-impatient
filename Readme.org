@@ -1,5 +1,5 @@
 #+TITLE: org-latex-instant-preview
-=Org-latex-instant-preview= provides instant preview of LaTeX snippets via MathJax outputed SVG.
+=Org-latex-instant-preview= provides instant preview of LaTeX snippets via MathJax outputed SVG. Unlike [[https://github.com/fuxialexander/emacs-webkit-katex-render][webkit-katex-render]], this does not need xwidget support.
 * Dependencies
   - [[https://github.com/mathjax/MathJax-node][MathJax-node]]
   - [[https://github.com/mathjax/mathjax-node-cli/][MathJax-node-cli]]
