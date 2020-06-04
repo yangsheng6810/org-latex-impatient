@@ -15,9 +15,11 @@ npm install mathjax-node-cli
 * Usage
 
 ** Start Instant Preview
+   Put your cursur in some LaTeX fragment or some math environments, and invoke
    #+BEGIN_SRC emacs-lisp
 (org-latex-instant-preview-send-latex)
    #+END_SRC
+   When you make modifications, an instant preview will be regenerated when Emacs is idle for ~org-latex-instant-preview-delay~ seconds.
 
 ** Stop Instant Preview
    #+BEGIN_SRC emacs-lisp

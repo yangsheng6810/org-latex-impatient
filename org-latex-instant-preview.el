@@ -21,6 +21,8 @@
 ;;;
 
 (eval-when-compile (require 'names))
+(require 'image-mode)
+(require 's)
 
 ;;;###autoload
 (define-namespace org-latex-instant-preview-
@@ -43,6 +45,7 @@
 (defvar -need-update nil)
 (defvar -timer nil)
 
+:autoload
 (defun stop ()
   "Stop instant preview of LaTeX snippets."
   (interactive)
@@ -65,6 +68,7 @@
     (s-chop-prefixes '("$$" "\\(" "$" "\\["))
     (s-chop-suffixes '("$$" "\\)" "$" "\\]"))))
 
+:autoload
 (defun start (&rest _)
   "Start instant preview."
   (interactive)
