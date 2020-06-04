@@ -34,7 +34,7 @@
   :group 'org-latex-instant-preview
   :type '(string))
 
-(defcustom delay 0.2
+(defcustom delay 0.3
   "Number of seconds to wait before a re-compilation."
   :group 'org-latex-instant-preview
   :type '(number))
@@ -50,7 +50,8 @@
   "Stop instant preview of LaTeX snippets."
   (interactive)
   (posframe-hide -output-buffer)
-  (remove-hook 'after-change-functions #'-prepare-render)
+  (remove-hook 'after-change-functions #'-prepare-render t)
+  (remove-hook 'post-command-hook #'-prepare-render t)
   (when -timer
     (cancel-timer -timer))
   (setq -need-update nil))
@@ -77,7 +78,8 @@
 for instant preview to work!")
     (error "Org-latex-instant-preview-tex2svg-bin is not set"))
 
-  (add-hook 'after-change-functions #'-prepare-render nil t)
+  (when (equal this-command #'start)
+    (add-hook 'after-change-functions #'-prepare-render nil t))
   (get-buffer-create -output-buffer)
   (let ((datum (org-element-context)))
     (when (memq (org-element-type datum) '(latex-environment latex-fragment))
@@ -92,20 +94,32 @@ for instant preview to work!")
 (defun -render (tex-string)
   "Render TEX-STRING to buffer. Old version."
   (with-current-buffer -output-buffer
-    (image-mode-as-text)
-    (erase-buffer)
-    (let (
-          (ss (shell-command-to-string
+    (message "Instant LaTeX rendering")
+    (let ((ss (shell-command-to-string
                (concat tex2svg-bin " "
-                       (shell-quote-argument tex-string)))))
-      (insert ss))
-    (image-mode)))
+                       (shell-quote-argument tex-string))))
+          (inhibit-message t))
+      (image-mode-as-text)
+      (erase-buffer)
+      (insert ss)
+      (image-mode))))
 
 (defun -show (display-point)
   "Show preview posframe at DISPLAY-POINT."
   (when (posframe-workable-p)
     (posframe-show -output-buffer
                    :position display-point)))
+
+:autoload
+(define-minor-mode mode
+  "Instant preview of LaTeX in org-mode"
+  nil nil nil
+  (if mode
+      (add-hook 'post-command-hook #'-prepare-render nil t)
+    (remove-hook 'post-command-hook #'-prepare-render t)
+    (when -timer
+      (cancel-timer -timer))
+    (posframe-hide -output-buffer)))
 )
 
 (provide 'org-latex-instant-preview)
