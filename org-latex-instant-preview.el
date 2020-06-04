@@ -94,8 +94,10 @@ for instant preview to work!")
   (with-current-buffer -output-buffer
     (image-mode-as-text)
     (erase-buffer)
-    (let ((ss (shell-command-to-string
-               (format "%s \"%s\"" tex2svg-bin tex-string))))
+    (let (
+          (ss (shell-command-to-string
+               (concat tex2svg-bin " "
+                       (shell-quote-argument tex-string)))))
       (insert ss))
     (image-mode)))
 
