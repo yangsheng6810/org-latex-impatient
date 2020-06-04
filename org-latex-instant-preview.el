@@ -31,7 +31,6 @@
   "Location of tex2svg executable."
   :group 'org-latex-instant-preview
   :type '(string))
-(setq tex2svg-bin "~/node_modules/mathjax-node-cli/bin/tex2svg")
 
 (defcustom delay 0.2
   "Number of seconds to wait before a re-compilation."
@@ -58,32 +57,36 @@
   (unless -need-update
     (setq -need-update t)
     (setq -timer
-          (run-with-idle-timer delay nil #'send-latex))))
+          (run-with-idle-timer delay nil #'start))))
 
-(defun -remove-latex-delimeter (ss)
+(defun -remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
   (s-with ss
     (s-chop-prefixes '("$$" "\\(" "$" "\\["))
     (s-chop-suffixes '("$$" "\\)" "$" "\\]"))))
 
-(defun send-latex (&rest _)
+(defun start (&rest _)
   "Start instant preview."
   (interactive)
+  (unless tex2svg-bin
+    (message "You need to set org-latex-instant-preview-tex2svg-bin
+for instant preview to work!")
+    (error "Org-latex-instant-preview-tex2svg-bin is not set"))
+
   (add-hook 'after-change-functions #'-prepare-render nil t)
   (get-buffer-create -output-buffer)
   (let ((datum (org-element-context)))
-    (message "datum is %s" datum)
     (when (memq (org-element-type datum) '(latex-environment latex-fragment))
 	    (let ((ss (org-element-property :value datum))
             (end (org-element-property :end datum)))
         (when (memq (org-element-type datum) '(latex-fragment))
-          (setq ss (my-org-remove-latex-delimeter ss)))
-	      (-render-latex ss)
+          (setq ss (-remove-math-delimeter ss)))
+	      (-render ss)
         (-show end))))
   (setq -need-update nil))
 
-(defun -render-latex (tex-string)
-  "Render TEX-STRING to buffer."
+(defun -render (tex-string)
+  "Render TEX-STRING to buffer. Old version."
   (with-current-buffer -output-buffer
     (image-mode-as-text)
     (erase-buffer)
