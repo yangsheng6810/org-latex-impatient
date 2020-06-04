@@ -22,6 +22,7 @@ npm install mathjax-node-cli
         ;; location of tex2svg executable
         "~/node_modules/mathjax-node-cli/bin/tex2svg"))
   #+END_SRC
+  [[file:gif/without_mode.gif]]
 
 ** Start Instant Preview
    Put your cursur in some LaTeX fragment or some math environments, and invoke
@@ -47,6 +48,7 @@ npm install mathjax-node-cli
         "~/node_modules/mathjax-node-cli/bin/tex2svg"))
   #+end_src
   Or just enable minor mode ~org-latex-instant-preview-mode~ manually when it is needed.
+  [[file:gif/with_mode.gif]]
 
 * Customization
 
