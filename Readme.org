@@ -31,3 +31,6 @@ npm install mathjax-node-cli
 
 ** Location of ~tex2svg~ Executable
    ~org-latex-instant-preview-tex2svg-bin~
+
+* License
+  This piece work is licensed under UNLICENSE.
