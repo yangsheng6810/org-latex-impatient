@@ -15,6 +15,20 @@ npm install mathjax-node-cli
   You need to set ~org-latex-instant-preview-tex2svg-bin~ to the location of the executable ~tex2svg~.
 
 * Usage
+** As Minor Mode
+   #+begin_src emacs-lisp
+(use-package org-latex-instant-preview
+  :defer t
+  :hook (org-mode . org-latex-instant-preview-mode)
+  :init
+  (setq org-latex-instant-preview-tex2svg-bin
+        ;; location of tex2svg executable
+        "~/node_modules/mathjax-node-cli/bin/tex2svg"))
+   #+end_src
+   Or just enable minor mode ~org-latex-instant-preview-mode~ manually when it is needed.
+   [[file:img/with_mode.gif]]
+
+** Manually
   #+BEGIN_SRC emacs-lisp
 (use-package org-latex-instant-preview
   :defer t
@@ -24,32 +38,17 @@ npm install mathjax-node-cli
         "~/node_modules/mathjax-node-cli/bin/tex2svg"))
   #+END_SRC
   [[file:img/without_mode.gif]]
-
-** Start Instant Preview
-   Put your cursur in some LaTeX fragment or some math environments, and invoke
-   #+BEGIN_SRC emacs-lisp
+*** Start Instant Preview
+    Put your cursur in some LaTeX fragment or some math environments, and invoke
+    #+BEGIN_SRC emacs-lisp
 (org-latex-instant-preview-send-latex)
-   #+END_SRC
-   When you make modifications, an instant preview will be regenerated when Emacs is idle for ~org-latex-instant-preview-delay~ seconds. The preview will NOT be updated when you move your cursor to another LaTeX snippet, but it will be updated if you make some modification to the new snippet. If you do want to update previews instantly when your cursor moves, check [[*Experimental Usage][Experimental Usage]].
+    #+END_SRC
+    When you make modifications, an instant preview will be regenerated when Emacs is idle for ~org-latex-instant-preview-delay~ seconds. The preview will NOT be updated when you move your cursor to another LaTeX snippet, but it will be updated if you make some modification to the new snippet. If you do want to update previews instantly when your cursor moves, check [[*Experimental Usage][Experimental Usage]].
 
-** Stop Instant Preview
-   #+BEGIN_SRC emacs-lisp
+*** Stop Instant Preview
+    #+BEGIN_SRC emacs-lisp
 (org-latex-instant-preview-stop)
-   #+END_SRC
-
-* Experimental Usage
-  A minor mode is implemented, but it is still experimental. Emacs may become laggy.
-  #+begin_src emacs-lisp
-(use-package org-latex-instant-preview
-  :defer t
-  :hook (org-mode . org-latex-instant-preview-mode)
-  :init
-  (setq org-latex-instant-preview-tex2svg-bin
-        ;; location of tex2svg executable
-        "~/node_modules/mathjax-node-cli/bin/tex2svg"))
-  #+end_src
-  Or just enable minor mode ~org-latex-instant-preview-mode~ manually when it is needed.
-  [[file:img/with_mode.gif]]
+    #+END_SRC
 
 * Customization
 
