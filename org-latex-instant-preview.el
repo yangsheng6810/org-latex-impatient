@@ -40,10 +40,15 @@
   :type '(number))
 
 (defconst -output-buffer "*org-latex-instant-preview-output-buffer*"
+  "Buffer to hold the output.")
+
+(defconst -posframe-buffer "*org-latex-instant-preview-posframe-buffer*"
   "Buffer to hold the preview.")
 
 (defvar -need-update nil)
 (defvar -timer nil)
+(defvar -last-tex-string "")
+(defvar -process nil)
 
 :autoload
 (defun stop ()
@@ -81,18 +86,22 @@ for instant preview to work!")
   (when (equal this-command #'start)
     (add-hook 'after-change-functions #'-prepare-render nil t))
   (get-buffer-create -output-buffer)
+  (get-buffer-create -posframe-buffer)
   (let ((datum (org-element-context)))
     (when (memq (org-element-type datum) '(latex-environment latex-fragment))
 	    (let ((ss (org-element-property :value datum))
             (end (org-element-property :end datum)))
         (when (memq (org-element-type datum) '(latex-fragment))
           (setq ss (-remove-math-delimeter ss)))
-	      (-render ss)
-        (-show end))))
+        (when (and ss
+                 (not (equal ss -last-tex-string)))
+            (-render ss end)))))
   (setq -need-update nil))
 
-(defun -render (tex-string)
-  "Render TEX-STRING to buffer. Old version."
+(defun -render-old (tex-string end)
+  "Render TEX-STRING to buffer, old version.
+
+Showing at point END."
   (with-current-buffer -output-buffer
     (message "Instant LaTeX rendering")
     (let ((ss (shell-command-to-string
@@ -102,12 +111,40 @@ for instant preview to work!")
       (image-mode-as-text)
       (erase-buffer)
       (insert ss)
-      (image-mode))))
+      (image-mode)
+      (-show end))))
+
+(defun -render (tex-string end)
+  "Render TEX-STRING to buffer, async version.
+
+Showing at point END"
+  (message "Instant LaTeX rendering")
+  (with-current-buffer -output-buffer
+    (erase-buffer))
+  (setq -last-tex-string tex-string)
+  (unless -process
+    (setq -process
+          (make-process
+           :name "org-latex-instant-preview"
+           :buffer -output-buffer
+           :command (list tex2svg-bin
+                          tex-string)
+           ;; :stderr ::my-err-buffer
+           :sentinel
+           (lambda (&rest _)
+             (let ((inhibit-message t))
+               (with-current-buffer -posframe-buffer
+                 (image-mode-as-text)
+                 (erase-buffer)
+                 (insert-buffer-substring -output-buffer)
+                 (image-mode))
+               (-show end)
+               (setq -process nil)))))))
 
 (defun -show (display-point)
   "Show preview posframe at DISPLAY-POINT."
   (when (posframe-workable-p)
-    (posframe-show -output-buffer
+    (posframe-show -posframe-buffer
                    :position display-point)))
 
 :autoload
@@ -119,7 +156,10 @@ for instant preview to work!")
     (remove-hook 'post-command-hook #'-prepare-render t)
     (when -timer
       (cancel-timer -timer))
-    (posframe-hide -output-buffer)))
+    (posframe-hide -posframe-buffer)
+    (kill-buffer -posframe-buffer)
+    (kill-buffer -output-buffer)
+    (setq -process nil)))
 )
 
 (provide 'org-latex-instant-preview)
