@@ -50,6 +50,7 @@
 (defvar -last-tex-string "")
 (defvar -last-position nil)
 (defvar -process nil)
+(defvar -preview-visible nil)
 
 :autoload
 (defun stop ()
@@ -150,13 +151,27 @@ Showing at point END"
     (posframe-show -posframe-buffer
                    :position display-point)))
 
+(defun -clear-refresh-maybe (window &rest _)
+  "Hide posframe buffer and refresh if needed.
+
+WINDOW holds the window in which posframe resides."
+  (posframe-hide -posframe-buffer)
+  (when (eq window (selected-window))
+    (posframe-show -posframe-buffer
+                   :position -last-position))
+  (setq -preview-visible nil))
+
 :autoload
 (define-minor-mode mode
   "Instant preview of LaTeX in org-mode"
   nil nil nil
   (if mode
-      (add-hook 'post-command-hook #'-prepare-render nil t)
+      (progn
+        (add-hook 'post-command-hook #'-prepare-render nil t)
+        (add-hook 'window-state-change-functions #'-clear nil t)
+        )
     (remove-hook 'post-command-hook #'-prepare-render t)
+    (remove-hook 'window-state-change-functions #'-clear t)
     (when -timer
       (cancel-timer -timer))
     (posframe-hide -posframe-buffer)
