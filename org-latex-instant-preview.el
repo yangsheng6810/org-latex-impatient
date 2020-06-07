@@ -48,6 +48,7 @@
 (defvar -need-update nil)
 (defvar -timer nil)
 (defvar -last-tex-string "")
+(defvar -last-position nil)
 (defvar -process nil)
 
 :autoload
@@ -93,9 +94,10 @@ for instant preview to work!")
             (end (org-element-property :end datum)))
         (when (memq (org-element-type datum) '(latex-fragment))
           (setq ss (-remove-math-delimeter ss)))
-        (when (and ss
-                 (not (equal ss -last-tex-string)))
-            (-render ss end)))))
+        (if (and -last-tex-string (equal ss -last-tex-string))
+            (unless (and -last-position (equal end -last-position))
+              (-show end))
+          (-render ss end)))))
   (setq -need-update nil))
 
 (defun -render-old (tex-string end)
@@ -122,6 +124,7 @@ Showing at point END"
   (with-current-buffer -output-buffer
     (erase-buffer))
   (setq -last-tex-string tex-string)
+  (setq -last-position end)
   (unless -process
     (setq -process
           (make-process
@@ -157,10 +160,7 @@ Showing at point END"
     (when -timer
       (cancel-timer -timer))
     (posframe-hide -posframe-buffer)
-    (kill-buffer -posframe-buffer)
-    (kill-buffer -output-buffer)
-    (setq -process nil)))
-)
+    (setq -process nil))))
 
 (provide 'org-latex-instant-preview)
 ;;; org-latex-instant-preview.el ends here
