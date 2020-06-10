@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords:
 ;; Homepage: https://github.com/yangsheng6810/org-latex-instant-preview
-;; Package-Requires: ((emacs 28.0.50) (cl-lib "0.5"))
+;; Package-Requires: ((emacs "26"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
