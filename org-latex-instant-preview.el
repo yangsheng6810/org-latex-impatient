@@ -168,10 +168,10 @@ WINDOW holds the window in which posframe resides."
   (if mode
       (progn
         (add-hook 'post-command-hook #'-prepare-render nil t)
-        (add-hook 'window-state-change-functions #'-clear nil t)
+        (add-hook 'window-state-change-functions #'-clear-refresh-maybe nil t)
         )
     (remove-hook 'post-command-hook #'-prepare-render t)
-    (remove-hook 'window-state-change-functions #'-clear t)
+    (remove-hook 'window-state-change-functions #'-clear-refresh-maybe t)
     (when -timer
       (cancel-timer -timer))
     (posframe-hide -posframe-buffer)
