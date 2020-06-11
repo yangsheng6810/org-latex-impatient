@@ -48,7 +48,7 @@
 (defvar -need-update nil)
 (defvar -timer nil)
 (defvar -last-tex-string "")
-(defvar -last-position nil)
+(defvar -last-end-position nil)
 (defvar -process nil)
 (defvar -preview-visible nil)
 
@@ -90,15 +90,16 @@ for instant preview to work!")
   (get-buffer-create -output-buffer)
   (get-buffer-create -posframe-buffer)
   (let ((datum (org-element-context)))
-    (when (memq (org-element-type datum) '(latex-environment latex-fragment))
-	    (let ((ss (org-element-property :value datum))
-            (end (org-element-property :end datum)))
-        (when (memq (org-element-type datum) '(latex-fragment))
-          (setq ss (-remove-math-delimeter ss)))
-        (if (and -last-tex-string (equal ss -last-tex-string))
-            (unless (and -last-position (equal end -last-position))
-              (-show end))
-          (-render ss end)))))
+    (if (memq (org-element-type datum) '(latex-environment latex-fragment))
+	      (let ((ss (org-element-property :value datum))
+              (end (org-element-property :end datum)))
+          (when (memq (org-element-type datum) '(latex-fragment))
+            (setq ss (-remove-math-delimeter ss)))
+          (if (and -last-tex-string (equal ss -last-tex-string))
+              (when (and -last-end-position (equal end -last-end-position))
+                (-show end))
+            (-render ss end)))
+      (posframe-hide -posframe-buffer)))
   (setq -need-update nil))
 
 (defun -render-old (tex-string end)
@@ -125,7 +126,7 @@ Showing at point END"
   (with-current-buffer -output-buffer
     (erase-buffer))
   (setq -last-tex-string tex-string)
-  (setq -last-position end)
+  (setq -last-end-position end)
   (unless -process
     (setq -process
           (make-process
@@ -158,7 +159,7 @@ WINDOW holds the window in which posframe resides."
   (posframe-hide -posframe-buffer)
   (when (eq window (selected-window))
     (posframe-show -posframe-buffer
-                   :position -last-position))
+                   :position -last-end-position))
   (setq -preview-visible nil))
 
 :autoload
