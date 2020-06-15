@@ -58,5 +58,8 @@ npm install mathjax-node-cli
 ** Location of ~tex2svg~ Executable
    ~org-latex-instant-preview-tex2svg-bin~
 
+** Scale of Preview
+   ~org-latex-instant-preview-scale~. In the current implementation, the scaled version will be blurred. This is due to limitations in the way Emacs handles SVG pictures. In the future, a custom version of ~tex2svg~ will be implemented to use scale by =MathJax= directly.
+
 * License
   This piece work is licensed under UNLICENSE.

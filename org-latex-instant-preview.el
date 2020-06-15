@@ -42,6 +42,11 @@
   :group 'org-latex-instant-preview
   :type '(number))
 
+(defcustom scale 1.0
+  "Scale of preview."
+  :group 'org-latex-instant-preview
+  :type '(float))
+
 (defconst -output-buffer "*org-latex-instant-preview-output-buffer*"
   "Buffer to hold the output.")
 
@@ -154,7 +159,8 @@ Showing at point END"
            ;; :stderr ::my-err-buffer
            :sentinel
            (lambda (&rest _)
-             (let ((inhibit-message t))
+             (let ((inhibit-message t)
+                   (image-auto-resize scale))
                (with-current-buffer -posframe-buffer
                  (image-mode-as-text)
                  (erase-buffer)
