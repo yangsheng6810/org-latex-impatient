@@ -3,19 +3,19 @@
 ;; Copyright (C) 2020 Sheng Yang
 ;;
 ;; Author:  Sheng Yang <styang@fastmail.com>
-;; Maintainer:  Sheng Yang <styang@fastmail.com>
 ;; Created: June 03, 2020
-;; Modified: June 03, 2020
-;; Version: 0.0.1
-;; Keywords:
+;; Modified: June 14, 2020
+;; Version: 0.0.2
+;; Keywords: tex,tools
 ;; Homepage: https://github.com/yangsheng6810/org-latex-instant-preview
-;; Package-Requires: ((emacs "26"))
+;; Package-Requires: ((emacs "26") (names "0.5.2") (s "1.8.0") (posframe "0.1.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
 ;;; Commentary:
 ;;
-;;  description
+;;  This package provides instant preview of LaTeX snippets via MathJax outputed
+;;  SVG.
 ;;
 ;;; Code:
 ;;;
@@ -23,6 +23,9 @@
 (eval-when-compile (require 'names))
 (require 'image-mode)
 (require 's)
+(require 'org)
+(require 'posframe)
+(require 'org-element)
 
 ;;;###autoload
 (define-namespace org-latex-instant-preview-
@@ -169,8 +172,7 @@ WINDOW holds the window in which posframe resides."
   (if mode
       (progn
         (add-hook 'post-command-hook #'-prepare-render nil t)
-        (add-hook 'window-state-change-functions #'-clear-refresh-maybe nil t)
-        )
+        (add-hook 'window-state-change-functions #'-clear-refresh-maybe nil t))
     (remove-hook 'post-command-hook #'-prepare-render t)
     (remove-hook 'window-state-change-functions #'-clear-refresh-maybe t)
     (when -timer
