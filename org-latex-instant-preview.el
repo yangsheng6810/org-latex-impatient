@@ -205,6 +205,7 @@ Showing at point END"
 (defun -fill-posframe-buffer ()
   "Write SVG in posframe buffer."
   (let ((inhibit-message t)
+        (image-auto-resize scale)
         ;; work around for the fact that -output-buffer is buffer local
         (output-buffer -output-buffer))
     (with-current-buffer -posframe-buffer
