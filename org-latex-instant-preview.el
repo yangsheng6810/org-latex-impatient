@@ -84,6 +84,12 @@
   (let ((color (face-foreground 'default)))
     (format "\\color{%s}{%s}" color ss)))
 
+(defun -in-latex-p (datum)
+  "Return t if DATUM is in a LaTeX fragment, nil otherwise."
+  (or (memq (org-element-type datum) '(latex-environment latex-fragment))
+      (and (memq (org-element-type datum) '(export-block))
+           (equal (org-element-property :type datum) "LATEX"))))
+
 :autoload
 (defun start (&rest _)
   "Start instant preview."
@@ -98,14 +104,14 @@ for instant preview to work!")
   (get-buffer-create -output-buffer)
   (get-buffer-create -posframe-buffer)
   (let ((datum (org-element-context)))
-    (if (or (memq (org-element-type datum) '(latex-environment latex-fragment))
-            (and (memq (org-element-type datum) '(export-block))
-                 (equal (org-element-property :type datum) "LATEX")))
+    (if (-in-latex-p datum)
 	      (let ((ss (org-element-property :value datum))
               (end (org-element-property :end datum)))
+          ;; the tex string from latex-fragment includes math delimeters like $,
+          ;; $$, \(\), \[\], and we need to remove them
           (when (memq (org-element-type datum) '(latex-fragment))
-            (setq ss (-wrap-color
-                      (-remove-math-delimeter ss))))
+            (setq ss (-remove-math-delimeter ss)))
+          (setq ss (-wrap-color ss))
           (if (and -last-tex-string (equal ss -last-tex-string))
               (when (and -last-end-position (equal end -last-end-position))
                 (-show end))
