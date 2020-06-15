@@ -58,7 +58,7 @@
 (defconst -posframe-buffer "*org-latex-instant-preview-posframe-buffer*"
   "Buffer to hold the preview.")
 
-(defvar-local -process nil)
+(defvar -process nil)
 (defvar -timer nil)
 (defvar-local -last-tex-string nil)
 (defvar-local -last-end-position nil)
@@ -96,7 +96,7 @@
   "Prepare timer to call re-compilation."
   (unless -timer
     (setq -timer
-            (run-with-idle-timer delay nil #'start))))
+          (run-with-idle-timer delay nil #'-timer-wrapper))))
 
 (defun -remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
@@ -122,6 +122,16 @@
   (get-buffer-create -output-buffer)
   (get-buffer-create -posframe-buffer))
 
+(defun -timer-wrapper ()
+  "Wrapper function that timer call."
+  (when -timer
+    (cancel-timer -timer))
+  (if -process
+      (setq -timer
+            (run-with-idle-timer delay nil #'-timer-wrapper))
+    (setq -timer nil)
+    (start)))
+
 :autoload
 (defun start (&rest _)
   "Start instant preview."
@@ -135,9 +145,7 @@ for instant preview to work!")
   (when (equal this-command #'start)
     (add-hook 'after-change-functions #'-prepare-render nil t))
 
-  (when -timer
-    (cancel-timer -timer)
-    (setq -timer nil))
+
 
   (let ((datum (org-element-context)))
     (if (-in-latex-p datum)
@@ -169,23 +177,22 @@ for instant preview to work!")
 
 (defun -interrupt-rendering ()
   "Interrupt current running rendering."
-
   (when -process
     (condition-case nil
         (kill-process -process)
-      (error nil))
-    (setq -process nil
-          ;; last render for tex string is invalid, therefore need to invalid
-          ;; it's cache
-          -last-tex-string nil)))
+      (error nil)))
+  (with-current-buffer -output-buffer
+    (erase-buffer))
+  (setq -process nil
+        ;; last render for tex string is invalid, therefore need to invalid
+        ;; it's cache
+        -last-tex-string nil))
 
 (defun -render (tex-string end)
   "Render TEX-STRING to buffer, async version.
 
 Showing at point END"
   (message "Instant LaTeX rendering")
-  (with-current-buffer -output-buffer
-    (erase-buffer))
   (setq -last-tex-string tex-string)
   (setq -last-end-position end)
   (-interrupt-rendering)
@@ -198,8 +205,12 @@ Showing at point END"
          ;; :stderr ::my-err-buffer
          :sentinel
          (lambda (&rest _)
-           (-fill-posframe-buffer)
-           (-show end)
+           (condition-case nil
+               (progn
+                 (-fill-posframe-buffer)
+                 (-show end))
+             (error nil))
+           ;; ensure -process is reset
            (setq -process nil)))))
 
 (defun -fill-posframe-buffer ()
@@ -207,11 +218,12 @@ Showing at point END"
   (let ((inhibit-message t)
         (image-auto-resize scale)
         ;; work around for the fact that -output-buffer is buffer local
-        (output-buffer -output-buffer))
+        (ss (with-current-buffer -output-buffer
+              (buffer-string))))
     (with-current-buffer -posframe-buffer
       (image-mode-as-text)
       (erase-buffer)
-      (insert-buffer-substring output-buffer)
+      (insert ss)
       (image-mode))))
 
 (defun -show (display-point)
@@ -228,7 +240,7 @@ Showing at point END"
 WINDOW holds the window in which posframe resides."
   (posframe-hide -posframe-buffer)
   (when (and -current-window
-         (eq window (selected-window)))
+             (eq window (selected-window)))
     (-show -last-end-position)))
 
 :autoload
