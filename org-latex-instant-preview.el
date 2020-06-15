@@ -27,6 +27,11 @@
 (require 'posframe)
 (require 'org-element)
 
+;; Workaround for defvar-local problem in names.el
+(unless (fboundp 'names--convert-defvar-local)
+  (defalias 'names--convert-defvar-local 'names--convert-defvar
+    "Special treatment for `defvar-local' FORM."))
+
 ;;;###autoload
 (define-namespace org-latex-instant-preview-
 ;; (defgroup org-latex-instant-preview nil
@@ -37,7 +42,7 @@
   :group 'org-latex-instant-preview
   :type '(string))
 
-(defcustom delay 0.3
+(defcustom delay 0.1
   "Number of seconds to wait before a re-compilation."
   :group 'org-latex-instant-preview
   :type '(number))
@@ -47,18 +52,34 @@
   :group 'org-latex-instant-preview
   :type '(float))
 
-(defconst -output-buffer "*org-latex-instant-preview-output-buffer*"
-  "Buffer to hold the output.")
+(defconst -output-buffer-prefix "*org-latex-instant-preview-output-buffer*"
+  "Prefix for buffer to hold the output.")
 
 (defconst -posframe-buffer "*org-latex-instant-preview-posframe-buffer*"
   "Buffer to hold the preview.")
 
-(defvar -need-update nil)
+(defvar-local -process nil)
 (defvar -timer nil)
-(defvar -last-tex-string "")
-(defvar -last-end-position nil)
-(defvar -process nil)
-(defvar -preview-visible nil)
+(defvar-local -last-tex-string nil)
+(defvar-local -last-end-position nil)
+(defvar-local -current-window nil)
+(defvar-local -output-buffer nil)
+
+
+(defun -clean-up ()
+  "Clean up timer, process, and variables."
+  (when -timer
+    (cancel-timer -timer)
+    (setq -timer nil))
+  (posframe-hide -posframe-buffer)
+  (when -process
+    (kill-process -process))
+  (setq -process nil
+        -last-tex-string nil
+        -last-end-position nil
+        -current-window nil
+        -output-buffer nil))
+
 
 :autoload
 (defun stop ()
@@ -68,15 +89,14 @@
   (remove-hook 'after-change-functions #'-prepare-render t)
   (remove-hook 'post-command-hook #'-prepare-render t)
   (when -timer
-    (cancel-timer -timer))
-  (setq -need-update nil))
+    (cancel-timer -timer)
+    (setq -timer nil)))
 
 (defun -prepare-render (&rest _)
   "Prepare timer to call re-compilation."
-  (unless -need-update
-    (setq -need-update t)
+  (unless -timer
     (setq -timer
-          (run-with-idle-timer delay nil #'start))))
+            (run-with-idle-timer delay nil #'start))))
 
 (defun -remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
@@ -85,7 +105,7 @@
     (s-chop-suffixes '("$$" "\\)" "$" "\\]"))))
 
 (defun -wrap-color (ss)
-  "Wrap SS with color."
+  "Wrap SS with color from default face."
   (let ((color (face-foreground 'default)))
     (format "\\color{%s}{%s}" color ss)))
 
@@ -94,6 +114,13 @@
   (or (memq (org-element-type datum) '(latex-environment latex-fragment))
       (and (memq (org-element-type datum) '(export-block))
            (equal (org-element-property :type datum) "LATEX"))))
+
+(defun -prepare-buffers ()
+  "Prepare buffers for output and posframe."
+  (setq -output-buffer
+        (concat -output-buffer-prefix (buffer-name)))
+  (get-buffer-create -output-buffer)
+  (get-buffer-create -posframe-buffer))
 
 :autoload
 (defun start (&rest _)
@@ -104,41 +131,53 @@
 for instant preview to work!")
     (error "Org-latex-instant-preview-tex2svg-bin is not set"))
 
+  ;; Only used for manual start
   (when (equal this-command #'start)
     (add-hook 'after-change-functions #'-prepare-render nil t))
-  (get-buffer-create -output-buffer)
-  (get-buffer-create -posframe-buffer)
+
+  (when -timer
+    (cancel-timer -timer)
+    (setq -timer nil))
+
   (let ((datum (org-element-context)))
     (if (-in-latex-p datum)
-	      (let ((ss (org-element-property :value datum))
-              (end (org-element-property :end datum)))
-          ;; the tex string from latex-fragment includes math delimeters like $,
-          ;; $$, \(\), \[\], and we need to remove them
-          (when (memq (org-element-type datum) '(latex-fragment))
-            (setq ss (-remove-math-delimeter ss)))
-          (setq ss (-wrap-color ss))
-          (if (and -last-tex-string (equal ss -last-tex-string))
-              (when (and -last-end-position (equal end -last-end-position))
-                (-show end))
-            (-render ss end)))
-      (posframe-hide -posframe-buffer)))
-  (setq -need-update nil))
+        (progn
+          (setq -current-window (selected-window))
+	        (let ((ss (org-element-property :value datum))
+                (end (org-element-property :end datum)))
+            ;; the tex string from latex-fragment includes math delimeters like
+            ;; $, $$, \(\), \[\], and we need to remove them.
+            (when (memq (org-element-type datum) '(latex-fragment))
+              (setq ss (-remove-math-delimeter ss)))
+            ;; set forground color for LaTeX equations.
+            (setq ss (-wrap-color ss))
+            (if (and -last-tex-string
+                     (equal ss -last-tex-string))
+                ;; TeX string is the same, we only need to update posframe
+                ;; position.
+                (when (and -last-end-position
+                           (equal end -last-end-position)
+                           ;; do not force showing posframe when a render
+                           ;; process is running.
+                           (not -process))
+                  (-show end))
+              ;; A new rendering is needed.
+              (-interrupt-rendering)
+              (-render ss end))))
+      ;; Hide posframe when not on LaTeX fragments.
+      (posframe-hide -posframe-buffer))))
 
-(defun -render-old (tex-string end)
-  "Render TEX-STRING to buffer, old version.
+(defun -interrupt-rendering ()
+  "Interrupt current running rendering."
 
-Showing at point END."
-  (with-current-buffer -output-buffer
-    (message "Instant LaTeX rendering")
-    (let ((ss (shell-command-to-string
-               (concat tex2svg-bin " "
-                       (shell-quote-argument tex-string))))
-          (inhibit-message t))
-      (image-mode-as-text)
-      (erase-buffer)
-      (insert ss)
-      (image-mode)
-      (-show end))))
+  (when -process
+    (condition-case nil
+        (kill-process -process)
+      (error nil))
+    (setq -process nil
+          ;; last render for tex string is invalid, therefore need to invalid
+          ;; it's cache
+          -last-tex-string nil)))
 
 (defun -render (tex-string end)
   "Render TEX-STRING to buffer, async version.
@@ -149,41 +188,47 @@ Showing at point END"
     (erase-buffer))
   (setq -last-tex-string tex-string)
   (setq -last-end-position end)
-  (unless -process
-    (setq -process
-          (make-process
-           :name "org-latex-instant-preview"
-           :buffer -output-buffer
-           :command (list tex2svg-bin
-                          tex-string)
-           ;; :stderr ::my-err-buffer
-           :sentinel
-           (lambda (&rest _)
-             (let ((inhibit-message t)
-                   (image-auto-resize scale))
-               (with-current-buffer -posframe-buffer
-                 (image-mode-as-text)
-                 (erase-buffer)
-                 (insert-buffer-substring -output-buffer)
-                 (image-mode))
-               (-show end)
-               (setq -process nil)))))))
+  (-interrupt-rendering)
+  (setq -process
+        (make-process
+         :name "org-latex-instant-preview"
+         :buffer -output-buffer
+         :command (list tex2svg-bin
+                        tex-string)
+         ;; :stderr ::my-err-buffer
+         :sentinel
+         (lambda (&rest _)
+           (-fill-posframe-buffer)
+           (-show end)
+           (setq -process nil)))))
+
+(defun -fill-posframe-buffer ()
+  "Write SVG in posframe buffer."
+  (let ((inhibit-message t)
+        ;; work around for the fact that -output-buffer is buffer local
+        (output-buffer -output-buffer))
+    (with-current-buffer -posframe-buffer
+      (image-mode-as-text)
+      (erase-buffer)
+      (insert-buffer-substring output-buffer)
+      (image-mode))))
 
 (defun -show (display-point)
   "Show preview posframe at DISPLAY-POINT."
-  (when (posframe-workable-p)
+  (when (and -current-window
+             (posframe-workable-p))
     (posframe-show -posframe-buffer
-                   :position display-point)))
+                   :position display-point
+                   :parent-window -current-window)))
 
 (defun -clear-refresh-maybe (window &rest _)
   "Hide posframe buffer and refresh if needed.
 
 WINDOW holds the window in which posframe resides."
   (posframe-hide -posframe-buffer)
-  (when (eq window (selected-window))
-    (posframe-show -posframe-buffer
-                   :position -last-end-position))
-  (setq -preview-visible nil))
+  (when (and -current-window
+         (eq window (selected-window)))
+    (-show -last-end-position)))
 
 :autoload
 (define-minor-mode mode
@@ -191,14 +236,12 @@ WINDOW holds the window in which posframe resides."
   nil nil nil
   (if mode
       (progn
+        (-prepare-buffers)
         (add-hook 'post-command-hook #'-prepare-render nil t)
         (add-hook 'window-state-change-functions #'-clear-refresh-maybe nil t))
     (remove-hook 'post-command-hook #'-prepare-render t)
     (remove-hook 'window-state-change-functions #'-clear-refresh-maybe t)
-    (when -timer
-      (cancel-timer -timer))
-    (posframe-hide -posframe-buffer)
-    (setq -process nil))))
+    (-clean-up))))
 
 (provide 'org-latex-instant-preview)
 ;;; org-latex-instant-preview.el ends here
