@@ -79,6 +79,11 @@
     (s-chop-prefixes '("$$" "\\(" "$" "\\["))
     (s-chop-suffixes '("$$" "\\)" "$" "\\]"))))
 
+(defun -wrap-color (ss)
+  "Wrap SS with color."
+  (let ((color (face-foreground 'default)))
+    (format "\\color{%s}{%s}" color ss)))
+
 :autoload
 (defun start (&rest _)
   "Start instant preview."
@@ -97,7 +102,8 @@ for instant preview to work!")
 	      (let ((ss (org-element-property :value datum))
               (end (org-element-property :end datum)))
           (when (memq (org-element-type datum) '(latex-fragment))
-            (setq ss (-remove-math-delimeter ss)))
+            (setq ss (-wrap-color
+                      (-remove-math-delimeter ss))))
           (if (and -last-tex-string (equal ss -last-tex-string))
               (when (and -last-end-position (equal end -last-end-position))
                 (-show end))
