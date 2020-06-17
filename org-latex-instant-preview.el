@@ -229,7 +229,8 @@ Showing at point END"
 (defun -show (display-point)
   "Show preview posframe at DISPLAY-POINT."
   (when (and -current-window
-             (posframe-workable-p))
+             (posframe-workable-p)
+             (< (window-start) display-point (window-end)))
     (posframe-show -posframe-buffer
                    :position display-point
                    :parent-window -current-window)))
