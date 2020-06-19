@@ -219,14 +219,17 @@ Showing at point END"
 (defun -fill-posframe-buffer ()
   "Write SVG in posframe buffer."
   (let ((inhibit-message t)
-        (image-auto-resize scale)
+        ;; (image-auto-resize scale)
         ;; work around for the fact that -output-buffer is buffer local
         (ss (with-current-buffer -output-buffer
               (buffer-string))))
     (with-current-buffer -posframe-buffer
       (image-mode-as-text)
       (erase-buffer)
+      ;; ad-hoc for scaling
+      (insert (format "<svg height=\"110%%\"><g transform=\"scale(%s)\">" scale))
       (insert ss)
+      (insert "</g></svg>")
       (image-mode))))
 
 (defun -show (display-point)
