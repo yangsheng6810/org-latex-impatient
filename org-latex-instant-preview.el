@@ -226,10 +226,15 @@ Showing at point END"
     (with-current-buffer -posframe-buffer
       (image-mode-as-text)
       (erase-buffer)
-      ;; ad-hoc for scaling
-      (insert (format "<svg height=\"110%%\"><g transform=\"scale(%s)\">" scale))
-      (insert ss)
-      (insert "</g></svg>")
+      (if (not (s-contains-p "svg" ss))
+          ;; compile error
+          (insert ss)
+        ;; successfully compiled
+        ;; ad-hoc for scaling
+        (insert (format
+                 "<svg height=\"110%%\"><g transform=\"scale(%s)\">" scale))
+        (insert ss)
+        (insert "</g></svg>"))
       (image-mode))))
 
 (defun -show (display-point)
