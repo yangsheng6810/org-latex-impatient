@@ -64,6 +64,7 @@
 (defvar-local -last-end-position nil)
 (defvar-local -current-window nil)
 (defvar-local -output-buffer nil)
+(defvar-local -is-inline nil)
 
 
 (defun -clean-up ()
@@ -103,6 +104,9 @@
 
 (defun -remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
+  (setq -is-inline
+        (or (s-starts-with? "\\(" ss)
+            (s-starts-with? "$" ss)))
   (s-with ss
     (s-chop-prefixes '("$$" "\\(" "$" "\\["))
     (s-chop-suffixes '("$$" "\\)" "$" "\\]"))))
@@ -203,8 +207,10 @@ Showing at point END"
         (make-process
          :name "org-latex-instant-preview"
          :buffer -output-buffer
-         :command (list tex2svg-bin
-                        tex-string)
+         :command (append (list tex2svg-bin
+                                tex-string)
+                          (when -is-inline
+                            '("--inline")))
          ;; :stderr ::my-err-buffer
          :sentinel
          (lambda (&rest _)
