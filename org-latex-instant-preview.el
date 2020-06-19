@@ -94,9 +94,12 @@
 
 (defun -prepare-render (&rest _)
   "Prepare timer to call re-compilation."
-  (unless -timer
-    (setq -timer
-          (run-with-idle-timer delay nil #'-timer-wrapper))))
+  (when (and (not (string= tex2svg-bin ""))
+             (executable-find tex2svg-bin)
+             (-in-latex-p))
+    (unless -timer
+      (setq -timer
+            (run-with-idle-timer delay nil #'-timer-wrapper)))))
 
 (defun -remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
@@ -109,11 +112,12 @@
   (let ((color (face-foreground 'default)))
     (format "\\color{%s}{%s}" color ss)))
 
-(defun -in-latex-p (datum)
+(defun -in-latex-p ()
   "Return t if DATUM is in a LaTeX fragment, nil otherwise."
-  (or (memq (org-element-type datum) '(latex-environment latex-fragment))
-      (and (memq (org-element-type datum) '(export-block))
-           (equal (org-element-property :type datum) "LATEX"))))
+  (let ((datum (org-element-context)))
+    (or (memq (org-element-type datum) '(latex-environment latex-fragment))
+        (and (memq (org-element-type datum) '(export-block))
+             (equal (org-element-property :type datum) "LATEX")))))
 
 (defun -prepare-buffers ()
   "Prepare buffers for output and posframe."
@@ -136,19 +140,18 @@
 (defun start (&rest _)
   "Start instant preview."
   (interactive)
-  (unless tex2svg-bin
+  (unless (and (not (string= tex2svg-bin ""))
+               (executable-find tex2svg-bin))
     (message "You need to set org-latex-instant-preview-tex2svg-bin
 for instant preview to work!")
-    (error "Org-latex-instant-preview-tex2svg-bin is not set"))
+    (error "Org-latex-instant-preview-tex2svg-bin is not set correctly"))
 
   ;; Only used for manual start
   (when (equal this-command #'start)
     (add-hook 'after-change-functions #'-prepare-render nil t))
 
-
-
   (let ((datum (org-element-context)))
-    (if (-in-latex-p datum)
+    (if (-in-latex-p)
         (progn
           (setq -current-window (selected-window))
 	        (let ((ss (org-element-property :value datum))
