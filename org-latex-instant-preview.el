@@ -86,7 +86,7 @@
 (defun stop ()
   "Stop instant preview of LaTeX snippets."
   (interactive)
-  (posframe-hide -output-buffer)
+  (posframe-hide -posframe-buffer)
   (remove-hook 'after-change-functions #'-prepare-render t)
   (remove-hook 'post-command-hook #'-prepare-render t)
   (when -timer
