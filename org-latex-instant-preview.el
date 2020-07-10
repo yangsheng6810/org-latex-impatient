@@ -128,7 +128,8 @@
   (setq -output-buffer
         (concat -output-buffer-prefix (buffer-name)))
   (get-buffer-create -output-buffer)
-  (get-buffer-create -posframe-buffer))
+  (get-buffer-create -posframe-buffer)
+  (buffer-disable-undo -posframe-buffer))
 
 (defun -timer-wrapper ()
   "Wrapper function that timer call."
