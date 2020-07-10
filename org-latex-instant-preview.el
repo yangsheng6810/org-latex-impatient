@@ -160,7 +160,12 @@ for instant preview to work!")
         (progn
           (setq -current-window (selected-window))
 	        (let ((ss (org-element-property :value datum))
-                (end (org-element-property :end datum)))
+                (end (org-element-property :end datum))
+                (latex-header
+                 (concat "\\newcommand{\\ensuremath}[1]{#1}\n"
+                         (plist-get (org-export-get-environment
+                                     (org-export-get-backend 'latex))
+                                    :latex-header))))
             ;; the tex string from latex-fragment includes math delimeters like
             ;; $, $$, \(\), \[\], and we need to remove them.
             (when (memq (org-element-type datum) '(latex-fragment))
@@ -179,7 +184,8 @@ for instant preview to work!")
                   (-show end))
               ;; A new rendering is needed.
               (-interrupt-rendering)
-              (-render ss end))))
+              (-render (concat latex-header ss)
+                       end))))
       ;; Hide posframe when not on LaTeX fragments.
       (posframe-hide -posframe-buffer))))
 
