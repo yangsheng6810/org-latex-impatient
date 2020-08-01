@@ -98,9 +98,10 @@
   (when (and (not (string= tex2svg-bin ""))
              (executable-find tex2svg-bin)
              (-in-latex-p))
-    (unless -timer
-      (setq -timer
-            (run-with-idle-timer delay nil #'-timer-wrapper)))))
+    (when -timer
+      (cancel-timer -timer))
+    (setq -timer
+          (run-with-idle-timer delay nil #'-timer-wrapper))))
 
 (defun -remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
