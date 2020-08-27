@@ -225,18 +225,16 @@ Showing at point END"
 (defun -insert-into-posframe-buffer (ss)
   "Insert SS into posframe buffer."
   (buffer-disable-undo -posframe-buffer)
-  (with-current-buffer -posframe-buffer
-    (image-mode-as-text)
-    (erase-buffer)
-    (insert ss)
-    (image-mode)))
+  (let ((inhibit-message t))
+    (with-current-buffer -posframe-buffer
+      (image-mode-as-text)
+      (erase-buffer)
+      (insert ss)
+      (image-mode))))
 
 (defun -fill-posframe-buffer ()
   "Write SVG in posframe buffer."
-  (let ((inhibit-message t)
-        ;; (image-auto-resize scale)
-        ;; work around for the fact that -output-buffer is buffer local
-        (ss (with-current-buffer -output-buffer
+  (let ((ss (with-current-buffer -output-buffer
               (buffer-string))))
     (unless (get-buffer -posframe-buffer)
       (get-buffer-create -posframe-buffer))
@@ -276,9 +274,10 @@ Showing at point END"
   (posframe-hide -posframe-buffer)
   (when (get-buffer -posframe-buffer)
     (setq -last-preview
-          (with-current-buffer -posframe-buffer
-            (image-mode-as-text)
-            (buffer-string)))
+      (with-current-buffer -posframe-buffer
+        (let ((inhibit-message t))
+          (image-mode-as-text)
+          (buffer-string))))
     (kill-buffer -posframe-buffer)))
 
 (defun -clear-refresh-maybe (window &rest _)
