@@ -267,7 +267,8 @@ Showing at point END"
         (-insert-into-posframe-buffer -last-preview)))
     (posframe-show -posframe-buffer
                    :position display-point
-                   :parent-window -current-window)))
+                   :parent-window -current-window
+                   :hidehandler #'posframe-hidehandler-when-buffer-switch)))
 
 (defun -hide ()
   "Hide preview posframe."
@@ -280,19 +281,6 @@ Showing at point END"
           (buffer-string))))
     (kill-buffer -posframe-buffer)))
 
-(defun -clear-refresh-maybe (window &rest _)
-  "Hide posframe buffer and refresh if needed.
-
-WINDOW holds the window in which posframe resides."
-  (if (and -current-window
-           (eq window (selected-window))
-           (eq major-mode 'org-mode)
-           (-in-latex-p))
-      (progn
-        (-show -last-position))
-    (-hide)
-    (-interrupt-rendering)))
-
 :autoload
 (define-minor-mode mode
   "Instant preview of LaTeX in org-mode"
@@ -302,9 +290,8 @@ WINDOW holds the window in which posframe resides."
         (setq -output-buffer
               (concat -output-buffer-prefix (buffer-name)))
         (add-hook 'post-command-hook #'-prepare-timer nil t)
-        (add-hook 'window-state-change-functions #'-clear-refresh-maybe nil t))
+        )
     (remove-hook 'post-command-hook #'-prepare-timer t)
-    (remove-hook 'window-state-change-functions #'-clear-refresh-maybe t)
     (stop)))
 
 ;; end of namespace
