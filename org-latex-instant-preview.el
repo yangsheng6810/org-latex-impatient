@@ -258,7 +258,7 @@ Showing at point END"
     (setq display-point -position))
   (when (and -current-window
              (posframe-workable-p)
-             (< (window-start) display-point (window-end)))
+             (<= (window-start) display-point (window-end)))
     (unless (get-buffer -posframe-buffer)
       (get-buffer-create -posframe-buffer)
       (when (and -last-preview
