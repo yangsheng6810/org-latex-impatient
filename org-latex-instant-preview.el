@@ -58,6 +58,12 @@
   :group 'org-latex-instant-preview
   :type '(repeat string))
 
+(defcustom posframe-position-handler
+  #'posframe-poshandler-point-bottom-left-corner
+  "Position handler posframe"
+  :group 'org-latex-instant-preview
+  :type '(function))
+
 (defconst -output-buffer-prefix "*org-latex-instant-preview*"
   "Prefix for buffer to hold the output.")
 
@@ -267,6 +273,7 @@ Showing at point END"
         (-insert-into-posframe-buffer -last-preview)))
     (posframe-show -posframe-buffer
                    :position display-point
+                   :poshandler posframe-position-handler
                    :parent-window -current-window
                    :hidehandler #'posframe-hidehandler-when-buffer-switch)))
 
