@@ -134,6 +134,12 @@
         (and (memq (org-element-type datum) '(export-block))
              (equal (org-element-property :type datum) "LATEX")))))
 
+(defun -has-latex-overlay ()
+  "Return t if there is LaTeX overlay showing."
+  (--first (or (overlay-get it 'xenops-overlay-type)
+               (equal 'org-latex-overlay (overlay-get it 'org-overlay-type)))
+           (append (overlays-at (point)) (overlays-at (1- (point))))))
+
 :autoload
 (defun start (&rest _)
   "Start instant preview."
@@ -149,7 +155,8 @@ for instant preview to work!")
     (add-hook 'after-change-functions #'-prepare-timer nil t))
 
   (if (and (eq major-mode 'org-mode)
-           (-in-latex-p))
+           (-in-latex-p)
+           (not (-has-latex-overlay)))
       (let ((datum (org-element-context)))
         (setq -current-window (selected-window))
 	(let ((tex-string (org-element-property :value datum))
