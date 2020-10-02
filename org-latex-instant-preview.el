@@ -289,10 +289,10 @@ Showing at point END"
   (posframe-hide -posframe-buffer)
   (when (get-buffer -posframe-buffer)
     (setq -last-preview
-      (with-current-buffer -posframe-buffer
-        (let ((inhibit-message t))
-          (image-mode-as-text)
-          (buffer-string))))
+          (with-current-buffer -posframe-buffer
+            (let ((inhibit-message t))
+              (image-mode-as-text)
+              (buffer-string))))
     (kill-buffer -posframe-buffer)))
 
 :autoload
