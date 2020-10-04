@@ -15,7 +15,6 @@ npm install mathjax-node-cli
   You need to set ~org-latex-instant-preview-tex2svg-bin~ to the location of the executable ~tex2svg~.
 
 * Usage
-** As Minor Mode
    #+begin_src emacs-lisp
 (use-package org-latex-instant-preview
   :defer t
@@ -28,38 +27,18 @@ npm install mathjax-node-cli
    Or just enable minor mode ~org-latex-instant-preview-mode~ manually when it is needed.
    [[file:img/with_mode.gif]]
 
-** Manually
-  #+BEGIN_SRC emacs-lisp
-(use-package org-latex-instant-preview
-  :defer t
-  :init
-  (setq org-latex-instant-preview-tex2svg-bin
-        ;; location of tex2svg executable
-        "~/node_modules/mathjax-node-cli/bin/tex2svg"))
-  #+END_SRC
-  [[file:img/without_mode.gif]]
-*** Start Instant Preview
-    Put your cursur in some LaTeX fragment or some math environments, and invoke
-    #+BEGIN_SRC emacs-lisp
-(org-latex-instant-preview-send-latex)
-    #+END_SRC
-    When you make modifications, an instant preview will be regenerated when Emacs is idle for ~org-latex-instant-preview-delay~ seconds. The preview will NOT be updated when you move your cursor to another LaTeX snippet, but it will be updated if you make some modification to the new snippet. If you do want to update previews instantly when your cursor moves, check [[*Experimental Usage][Experimental Usage]].
-
-*** Stop Instant Preview
-    #+BEGIN_SRC emacs-lisp
-(org-latex-instant-preview-stop)
-    #+END_SRC
-
 * Customization
+   - ~org-latex-instant-preview-delay~: change the number of seconds to wait before re-compilation after Emacs is idle. Default to be 0.1.
+   - ~org-latex-instant-preview-tex2svg-bin~:  set the location of ~tex2svg~ executable.
+   - ~org-latex-instant-preview-scale~: set the scale of the preview. Due to limitations in the way Emacs handles SVG pictures, it is implemented by manipulating SVG directly.
+   - ~org-latex-instant-preview-posframe-position-handler~: set the posframe position handler. Default to be ~posframe-poshandler-point-bottom-left-corner~. Check the documentation of ~posframe-show~ for other options.
+   - ~org-latex-instant-preview-user-latex-definitions~: custom LaTeX definitions used in the preview. Should be a list of strings. Default: ~'("\\newcommand{\\ensuremath}[1]{#1}")~, which handles ~\ensuremath~ correctly for =MathJax=. In general, it is recommended to add your custom LaTeX command via the following:
+     #+BEGIN_SRC org
+,#+LATEX_HEADER: \newcommand{\someNewCommand}{Some Definition}
+     #+END_SRC                                                                                                                                                                                                     
 
-** Delay Time Before Re-compilation
-   Custom ~org-latex-instant-preview-delay~ to change the number of seconds to wait before re-compilation after Emacs is idle.
-
-** Location of ~tex2svg~ Executable
-   ~org-latex-instant-preview-tex2svg-bin~
-
-** Scale of Preview
-   ~org-latex-instant-preview-scale~. In the current implementation, the scaled version will be blurred. This is due to limitations in the way Emacs handles SVG pictures. In the future, a custom version of ~tex2svg~ will be implemented to use scale by =MathJax= directly.
+* Known Issue
+  - Sometimes the posframe buffer is slightly smaller than the rendered preview, causing the bottom part of the preview not showing.
 
 * License
   This piece work is licensed under UNLICENSE.
