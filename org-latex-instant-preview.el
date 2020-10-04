@@ -282,6 +282,7 @@ Showing at point END"
                    :position display-point
                    :poshandler posframe-position-handler
                    :parent-window -current-window
+                   :internal-border-width 1
                    :hidehandler #'posframe-hidehandler-when-buffer-switch)))
 
 (defun -hide ()
