@@ -257,7 +257,7 @@ Showing at point END"
       (setq ss
             (concat
              ;; 100% seems wierd
-             "<svg height=\"110%%\">"
+             "<svg height=\"110%\">"
              ;; ad-hoc for scaling
              (format "<g transform=\"scale(%s)\">" scale)
              ss
