@@ -8,7 +8,7 @@
 ;; Version: 0.0.2
 ;; Keywords: tex,tools
 ;; Homepage: https://github.com/yangsheng6810/org-latex-instant-preview
-;; Package-Requires: ((emacs "26") (names "0.5.2") (s "1.8.0") (posframe "0.1.0"))
+;; Package-Requires: ((emacs "26") (names "0.5.2") (s "1.8.0") (posframe "0.1.0") (org "9.3") (dash "2.17.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -23,6 +23,7 @@
 (eval-when-compile (require 'names))
 (require 'image-mode)
 (require 's)
+(require 'dash)
 (require 'org)
 (require 'posframe)
 (require 'org-element)
@@ -60,7 +61,7 @@
 
 (defcustom posframe-position-handler
   #'posframe-poshandler-point-bottom-left-corner
-  "Position handler posframe"
+  "The handler for posframe position."
   :group 'org-latex-instant-preview
   :type '(function))
 
