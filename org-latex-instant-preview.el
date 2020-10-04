@@ -4,8 +4,8 @@
 ;;
 ;; Author:  Sheng Yang <styang@fastmail.com>
 ;; Created: June 03, 2020
-;; Modified: June 14, 2020
-;; Version: 0.0.2
+;; Modified: October 04, 2020
+;; Version: 0.1.0
 ;; Keywords: tex,tools
 ;; Homepage: https://github.com/yangsheng6810/org-latex-instant-preview
 ;; Package-Requires: ((emacs "26") (names "0.5.2") (s "1.8.0") (posframe "0.1.0") (org "9.3") (dash "2.17.0"))
