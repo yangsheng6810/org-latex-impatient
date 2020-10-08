@@ -97,7 +97,7 @@ can be found in docstring of `posframe-show'."
   :type '(repeat string))
 
 (defcustom posframe-position-handler
-  #'posframe-poshandler-point-bottom-left-corner
+  #'poshandler
   "The handler for posframe position."
   :group 'org-latex-instant-preview
   :type '(function))
