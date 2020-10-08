@@ -33,6 +33,43 @@
   (defalias 'names--convert-defvar-local 'names--convert-defvar
     "Special treatment for `defvar-local' FORM."))
 
+;; Additional posframe poshandler
+(unless (fboundp 'posframe-poshandler-point-window-center)
+  (defun posframe-poshandler-point-window-center (info)
+    "Posframe's position handler.
+
+Get a position which let posframe stay right below current
+position, centered in the current window. The structure of INFO
+can be found in docstring of `posframe-show'."
+    (let* ((window-left (plist-get info :parent-window-left))
+           (window-top (plist-get info :parent-window-top))
+           (window-width (plist-get info :parent-window-width))
+           (window-height (plist-get info :parent-window-height))
+           (posframe-width (plist-get info :posframe-width))
+           (posframe-height (plist-get info :posframe-height))
+           (mode-line-height (plist-get info :mode-line-height))
+           (y-pixel-offset (plist-get info :y-pixel-offset))
+           (posframe-height (plist-get info :posframe-height))
+           (ymax (plist-get info :parent-frame-height))
+           (window (plist-get info :parent-window))
+           (position-info (plist-get info :position-info))
+           (header-line-height (plist-get info :header-line-height))
+           (tab-line-height (plist-get info :tab-line-height))
+           (y-top (+ (cadr (window-pixel-edges window))
+                     tab-line-height
+                     header-line-height
+                     (- (or (cdr (posn-x-y position-info)) 0)
+                        ;; Fix the conflict with flycheck
+                        ;; http://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
+                        (or (cdr (posn-object-x-y position-info)) 0))
+                     y-pixel-offset))
+           (font-height (plist-get info :font-height))
+           (y-bottom (+ y-top font-height)))
+      (cons (+ window-left (/ (- window-width posframe-width) 2))
+            (max 0 (if (> (+ y-bottom (or posframe-height 0)) ymax)
+                       (- y-top (or posframe-height 0))
+                     y-bottom))))))
+
 ;;;###autoload
 (define-namespace org-latex-instant-preview-
 ;; (defgroup org-latex-instant-preview nil
@@ -81,6 +118,16 @@
 (defvar-local -output-buffer nil)
 (defvar-local -is-inline nil)
 
+
+(defun poshandler (info)
+  "Default position handler for posframe.
+
+Uses the end point of the current LaTeX fragment for inline math,
+and centering right below the end point otherwise. Position are
+calculated from INFO."
+  (if -is-inline
+      (posframe-poshandler-point-bottom-left-corner info)
+    (posframe-poshandler-point-window-center info)))
 
 (defun -clean-up ()
   "Clean up timer, process, and variables."
@@ -167,6 +214,7 @@ for instant preview to work!")
                        (plist-get (org-export-get-environment
                                    (org-export-get-backend 'latex))
                                   :latex-header))))
+          (setq -is-inline nil)
           ;; the tex string from latex-fragment includes math delimeters like
           ;; $, $$, \(\), \[\], and we need to remove them.
           (when (memq (org-element-type datum) '(latex-fragment))
@@ -279,6 +327,9 @@ Showing at point END"
                  (not (string= "" -last-preview)))
         ;; use cached preview
         (-insert-into-posframe-buffer -last-preview)))
+    (let ((temp -is-inline))
+      (with-current-buffer -posframe-buffer
+        (setq -is-inline temp)))
     (posframe-show -posframe-buffer
                    :position display-point
                    :poshandler posframe-position-handler
