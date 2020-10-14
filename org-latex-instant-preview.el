@@ -29,9 +29,10 @@
 (require 'org-element)
 
 ;; Workaround for defvar-local problem in names.el
-(unless (fboundp 'names--convert-defvar-local)
-  (defalias 'names--convert-defvar-local 'names--convert-defvar
-    "Special treatment for `defvar-local' FORM."))
+(eval-when-compile
+  (unless (fboundp 'names--convert-defvar-local)
+    (defalias 'names--convert-defvar-local 'names--convert-defvar
+      "Special treatment for `defvar-local' FORM.")))
 
 ;; Additional posframe poshandler
 (unless (fboundp 'posframe-poshandler-point-window-center)
