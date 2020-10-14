@@ -109,6 +109,12 @@ can be found in docstring of `posframe-show'."
 (defconst -posframe-buffer "*org-latex-instant-preview*"
   "Buffer to hold the preview.")
 
+(defvar keymap
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-g" #'abort-preview)
+    map)
+  "Keymap for reading input.")
+
 (defvar -process nil)
 (defvar -timer nil)
 (defvar-local -last-tex-string nil)
@@ -118,6 +124,7 @@ can be found in docstring of `posframe-show'."
 (defvar-local -current-window nil)
 (defvar-local -output-buffer nil)
 (defvar-local -is-inline nil)
+(defvar-local -force-hidden nil)
 
 
 (defun poshandler (info)
@@ -232,8 +239,11 @@ for instant preview to work!")
                          (equal -position -last-position)
                          ;; do not force showing posframe when a render
                          ;; process is running.
-                         (not -process))
+                         (not -process)
+                         (not -force-hidden))
                 (-show))
+            ;; reset `-force-hidden'
+            (setq -force-hidden nil)
             ;; A new rendering is needed.
             (-interrupt-rendering)
             (-render tex-string))))
@@ -321,7 +331,8 @@ Showing at point END"
     (setq display-point -position))
   (when (and -current-window
              (posframe-workable-p)
-             (<= (window-start) display-point (window-end)))
+             (<= (window-start) display-point (window-end))
+             (not -force-hidden))
     (unless (get-buffer -posframe-buffer)
       (get-buffer-create -posframe-buffer)
       (when (and -last-preview
@@ -331,6 +342,9 @@ Showing at point END"
     (let ((temp -is-inline))
       (with-current-buffer -posframe-buffer
         (setq -is-inline temp)))
+
+    ;; handle C-g
+    (define-key keymap (kbd "C-g") #'abort-preview)
     (posframe-show -posframe-buffer
                    :position display-point
                    :poshandler posframe-position-handler
@@ -340,6 +354,7 @@ Showing at point END"
 
 (defun -hide ()
   "Hide preview posframe."
+  (define-key keymap (kbd "C-g") nil)
   (posframe-hide -posframe-buffer)
   (when (get-buffer -posframe-buffer)
     (setq -last-preview
@@ -349,10 +364,18 @@ Showing at point END"
               (buffer-string))))
     (kill-buffer -posframe-buffer)))
 
+(defun abort-preview ()
+  "Abort preview."
+  (interactive)
+  (-interrupt-rendering)
+  (define-key keymap (kbd "C-g") nil)
+  (setq -force-hidden t)
+  (-hide))
+
 :autoload
 (define-minor-mode mode
   "Instant preview of LaTeX in org-mode"
-  nil nil nil
+  nil nil keymap
   (if mode
       (progn
         (setq -output-buffer
