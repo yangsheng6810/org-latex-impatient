@@ -91,6 +91,16 @@ can be found in docstring of `posframe-show'."
   :group 'org-latex-instant-preview
   :type '(float))
 
+(defcustom border-color "black"
+  "Color of preview border."
+  :group 'org-latex-instant-preview
+  :type '(color))
+
+(defcustom border-width 1
+  "Width of preview border."
+  :group 'org-latex-instant-preview
+  :type '(integer))
+
 (defcustom user-latex-definitions
   '("\\newcommand{\\ensuremath}[1]{#1}")
   "Custom LaTeX definitions used in preview."
@@ -349,7 +359,8 @@ Showing at point END"
                    :position display-point
                    :poshandler posframe-position-handler
                    :parent-window -current-window
-                   :internal-border-width 1
+                   :internal-border-width border-width
+                   :internal-border-color border-color
                    :hidehandler #'posframe-hidehandler-when-buffer-switch)))
 
 (defun -hide ()
