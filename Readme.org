@@ -39,7 +39,7 @@ npm install mathjax-node-cli
      #+END_SRC                                                                                                                                                                                                     
 
 * Known Issue
-  - Sometimes the posframe buffer is slightly smaller than the rendered preview, causing the bottom part of the preview not showing.
+  - Some SVG files get cropped slightly more than it should. This happens with =librsvg= 2.45 or below. It can also happen on Emacs 28, problem introduced in commit =8f42b94f= and fixed in =b42481e2=. ([[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=44065][bug #44065]])
 
 * License
   This piece work is licensed under UNLICENSE.
