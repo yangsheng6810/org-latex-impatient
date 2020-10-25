@@ -31,14 +31,15 @@ npm install mathjax-node-cli
    - ~org-latex-instant-preview-delay~: change the number of seconds to wait before re-compilation after Emacs is idle. Default to be 0.1.
    - ~org-latex-instant-preview-tex2svg-bin~:  set the location of ~tex2svg~ executable.
    - ~org-latex-instant-preview-scale~: set the scale of the preview. Due to limitations in the way Emacs handles SVG pictures, it is implemented by manipulating SVG directly.
-   - ~org-latex-instant-preview-posframe-position-handler~: set the posframe position handler. Default to be ~posframe-poshandler-point-bottom-left-corner~. Check the documentation of ~posframe-show~ for other options.
+   - ~org-latex-instant-preview-posframe-position-handler~: set the posframe position handler.
+       You might want to use ~posframe-poshandler-point-bottom-left-corner~ for showing it using the end point of the current LaTeX fragment, or ~posframe-poshandler-point-window-center~ for a position centering right below the end point. Default value is ~org-latex-instant-preview-poshandler~, which uses end point of current LaTeX fragment for inline math, and centering right below the end point otherwise. Check the documentation of ~posframe-show~ for other options.
    - ~org-latex-instant-preview-user-latex-definitions~: custom LaTeX definitions used in the preview. Should be a list of strings. Default: ~'("\\newcommand{\\ensuremath}[1]{#1}")~, which handles ~\ensuremath~ correctly for =MathJax=. In general, it is recommended to add your custom LaTeX command via the following:
      #+BEGIN_SRC org
 ,#+LATEX_HEADER: \newcommand{\someNewCommand}{Some Definition}
      #+END_SRC                                                                                                                                                                                                     
 
 * Known Issue
-  - Sometimes the posframe buffer is slightly smaller than the rendered preview, causing the bottom part of the preview not showing.
+  - Some SVG files get cropped slightly more than it should. This happens with =librsvg= 2.45 or below. It can also happen on Emacs 28, problem introduced in commit =8f42b94f= and fixed in =b42481e2=. ([[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=44065][bug #44065]])
 
 * License
   This piece work is licensed under UNLICENSE.

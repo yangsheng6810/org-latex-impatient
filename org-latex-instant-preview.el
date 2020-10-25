@@ -4,8 +4,8 @@
 ;;
 ;; Author:  Sheng Yang <styang@fastmail.com>
 ;; Created: June 03, 2020
-;; Modified: June 14, 2020
-;; Version: 0.0.2
+;; Modified: October 04, 2020
+;; Version: 0.1.0
 ;; Keywords: tex,tools
 ;; Homepage: https://github.com/yangsheng6810/org-latex-instant-preview
 ;; Package-Requires: ((emacs "26") (names "0.5.2") (s "1.8.0") (posframe "0.8.0") (org "9.3") (dash "2.17.0"))
@@ -29,9 +29,47 @@
 (require 'org-element)
 
 ;; Workaround for defvar-local problem in names.el
-(unless (fboundp 'names--convert-defvar-local)
-  (defalias 'names--convert-defvar-local 'names--convert-defvar
-    "Special treatment for `defvar-local' FORM."))
+(eval-when-compile
+  (unless (fboundp 'names--convert-defvar-local)
+    (defalias 'names--convert-defvar-local 'names--convert-defvar
+      "Special treatment for `defvar-local' FORM.")))
+
+;; Additional posframe poshandler
+(unless (fboundp 'posframe-poshandler-point-window-center)
+  (defun posframe-poshandler-point-window-center (info)
+    "Posframe's position handler.
+
+Get a position which let posframe stay right below current
+position, centered in the current window. The structure of INFO
+can be found in docstring of `posframe-show'."
+    (let* ((window-left (plist-get info :parent-window-left))
+           (window-top (plist-get info :parent-window-top))
+           (window-width (plist-get info :parent-window-width))
+           (window-height (plist-get info :parent-window-height))
+           (posframe-width (plist-get info :posframe-width))
+           (posframe-height (plist-get info :posframe-height))
+           (mode-line-height (plist-get info :mode-line-height))
+           (y-pixel-offset (plist-get info :y-pixel-offset))
+           (posframe-height (plist-get info :posframe-height))
+           (ymax (plist-get info :parent-frame-height))
+           (window (plist-get info :parent-window))
+           (position-info (plist-get info :position-info))
+           (header-line-height (plist-get info :header-line-height))
+           (tab-line-height (plist-get info :tab-line-height))
+           (y-top (+ (cadr (window-pixel-edges window))
+                     tab-line-height
+                     header-line-height
+                     (- (or (cdr (posn-x-y position-info)) 0)
+                        ;; Fix the conflict with flycheck
+                        ;; http://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
+                        (or (cdr (posn-object-x-y position-info)) 0))
+                     y-pixel-offset))
+           (font-height (plist-get info :font-height))
+           (y-bottom (+ y-top font-height)))
+      (cons (+ window-left (/ (- window-width posframe-width) 2))
+            (max 0 (if (> (+ y-bottom (or posframe-height 0)) ymax)
+                       (- y-top (or posframe-height 0))
+                     y-bottom))))))
 
 ;;;###autoload
 (define-namespace org-latex-instant-preview-
@@ -53,6 +91,16 @@
   :group 'org-latex-instant-preview
   :type '(float))
 
+(defcustom border-color "black"
+  "Color of preview border."
+  :group 'org-latex-instant-preview
+  :type '(color))
+
+(defcustom border-width 1
+  "Width of preview border."
+  :group 'org-latex-instant-preview
+  :type '(integer))
+
 (defcustom user-latex-definitions
   '("\\newcommand{\\ensuremath}[1]{#1}")
   "Custom LaTeX definitions used in preview."
@@ -60,7 +108,7 @@
   :type '(repeat string))
 
 (defcustom posframe-position-handler
-  #'posframe-poshandler-point-bottom-left-corner
+  #'poshandler
   "The handler for posframe position."
   :group 'org-latex-instant-preview
   :type '(function))
@@ -71,6 +119,12 @@
 (defconst -posframe-buffer "*org-latex-instant-preview*"
   "Buffer to hold the preview.")
 
+(defvar keymap
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-g" #'abort-preview)
+    map)
+  "Keymap for reading input.")
+
 (defvar -process nil)
 (defvar -timer nil)
 (defvar-local -last-tex-string nil)
@@ -80,7 +134,18 @@
 (defvar-local -current-window nil)
 (defvar-local -output-buffer nil)
 (defvar-local -is-inline nil)
+(defvar-local -force-hidden nil)
 
+
+(defun poshandler (info)
+  "Default position handler for posframe.
+
+Uses the end point of the current LaTeX fragment for inline math,
+and centering right below the end point otherwise. Position are
+calculated from INFO."
+  (if -is-inline
+      (posframe-poshandler-point-bottom-left-corner info)
+    (posframe-poshandler-point-window-center info)))
 
 (defun -clean-up ()
   "Clean up timer, process, and variables."
@@ -167,6 +232,7 @@ for instant preview to work!")
                        (plist-get (org-export-get-environment
                                    (org-export-get-backend 'latex))
                                   :latex-header))))
+          (setq -is-inline nil)
           ;; the tex string from latex-fragment includes math delimeters like
           ;; $, $$, \(\), \[\], and we need to remove them.
           (when (memq (org-element-type datum) '(latex-fragment))
@@ -183,8 +249,11 @@ for instant preview to work!")
                          (equal -position -last-position)
                          ;; do not force showing posframe when a render
                          ;; process is running.
-                         (not -process))
+                         (not -process)
+                         (not -force-hidden))
                 (-show))
+            ;; reset `-force-hidden'
+            (setq -force-hidden nil)
             ;; A new rendering is needed.
             (-interrupt-rendering)
             (-render tex-string))))
@@ -272,22 +341,31 @@ Showing at point END"
     (setq display-point -position))
   (when (and -current-window
              (posframe-workable-p)
-             (<= (window-start) display-point (window-end)))
+             (<= (window-start) display-point (window-end))
+             (not -force-hidden))
     (unless (get-buffer -posframe-buffer)
       (get-buffer-create -posframe-buffer)
       (when (and -last-preview
                  (not (string= "" -last-preview)))
         ;; use cached preview
         (-insert-into-posframe-buffer -last-preview)))
+    (let ((temp -is-inline))
+      (with-current-buffer -posframe-buffer
+        (setq -is-inline temp)))
+
+    ;; handle C-g
+    (define-key keymap (kbd "C-g") #'abort-preview)
     (posframe-show -posframe-buffer
                    :position display-point
                    :poshandler posframe-position-handler
                    :parent-window -current-window
-                   :internal-border-width 1
+                   :internal-border-width border-width
+                   :internal-border-color border-color
                    :hidehandler #'posframe-hidehandler-when-buffer-switch)))
 
 (defun -hide ()
   "Hide preview posframe."
+  (define-key keymap (kbd "C-g") nil)
   (posframe-hide -posframe-buffer)
   (when (get-buffer -posframe-buffer)
     (setq -last-preview
@@ -297,10 +375,18 @@ Showing at point END"
               (buffer-string))))
     (kill-buffer -posframe-buffer)))
 
+(defun abort-preview ()
+  "Abort preview."
+  (interactive)
+  (-interrupt-rendering)
+  (define-key keymap (kbd "C-g") nil)
+  (setq -force-hidden t)
+  (-hide))
+
 :autoload
 (define-minor-mode mode
   "Instant preview of LaTeX in org-mode"
-  nil nil nil
+  nil nil keymap
   (if mode
       (progn
         (setq -output-buffer
