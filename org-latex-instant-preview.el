@@ -173,7 +173,8 @@ calculated from INFO."
   (when -timer
     (cancel-timer -timer)
     (setq -timer nil))
-  (if (and (eq major-mode 'org-mode)
+  (if (and (or (eq major-mode 'org-mode)
+               (eq major-mode 'latex-mode))
            (-in-latex-p))
       (setq -timer
             (run-with-idle-timer delay nil #'start))
@@ -195,16 +196,80 @@ calculated from INFO."
 
 (defun -in-latex-p ()
   "Return t if DATUM is in a LaTeX fragment, nil otherwise."
-  (let ((datum (org-element-context)))
-    (or (memq (org-element-type datum) '(latex-environment latex-fragment))
-        (and (memq (org-element-type datum) '(export-block))
-             (equal (org-element-property :type datum) "LATEX")))))
+  (cond ((eq major-mode 'org-mode)
+         (let ((datum (org-element-context)))
+           (or (memq (org-element-type datum) '(latex-environment latex-fragment))
+               (and (memq (org-element-type datum) '(export-block))
+                    (equal (org-element-property :type datum) "LATEX")))))
+        ((eq major-mode 'latex-mode)
+         (-tex-in-latex-p))
+        (t (message "We only support org-mode and latex-mode")
+           nil)))
+
+(defun -tex-in-latex-p ()
+  "Return t if in LaTeX fragment in LaTeX."
+  (let ((faces (face-at-point nil t)))
+    (or (-contains? faces 'font-latex-math-face)
+        (-contains? faces 'preview-face))))
 
 (defun -has-latex-overlay ()
   "Return t if there is LaTeX overlay showing."
   (--first (or (overlay-get it 'xenops-overlay-type)
                (equal 'org-latex-overlay (overlay-get it 'org-overlay-type)))
            (append (overlays-at (point)) (overlays-at (1- (point))))))
+
+(defun -get-tex-string ()
+  "Return the string of LaTeX fragment."
+  (cond ((eq major-mode 'org-mode)
+         (let ((datum (org-element-context)))
+           (org-element-property :value datum)))
+        ((eq major-mode 'latex-mode)
+         (let (begin end)
+           (save-excursion
+             (while (-tex-in-latex-p)
+               (backward-char))
+             (setq begin (1+ (point))))
+           (save-excursion
+             (while (-tex-in-latex-p)
+               (forward-char))
+             (setq end (point)))
+           (let ((ss (buffer-substring-no-properties begin end)))
+             (message "ss is %S" ss)
+             ss)))
+        (t "")))
+
+(defun -get-tex-position ()
+  "Return the end position of LaTeX fragment."
+  (cond ((eq major-mode 'org-mode)
+         (let ((datum (org-element-context)))
+           (org-element-property :end datum)))
+        ((eq major-mode 'latex-mode)
+         (save-excursion
+           (while (-tex-in-latex-p)
+             (forward-char))
+           (point)))
+        (t (message "Only org-mode and latex-mode supported") nil)))
+
+(defun -need-remove-delimeters ()
+  "Return t if need to remove delimeters."
+  (cond ((eq major-mode 'org-mode)
+         (let ((datum (org-element-context)))
+           (memq (org-element-type datum) '(latex-fragment))))
+        ((eq major-mode 'latex-mode)
+         (message "Not implemente.")
+         t)
+        (t "")))
+
+(defun -get-headers ()
+  "Return a string of headers."
+  (cond ((eq major-mode 'org-mode)
+         (plist-get (org-export-get-environment
+                     (org-export-get-backend 'latex))
+                    :latex-header))
+        ((eq major-mode 'latex-mode)
+         (message "Get header not supported in latex-mode yet.")
+         "")
+        (t "")))
 
 :autoload
 (defun start (&rest _)
@@ -220,43 +285,41 @@ for instant preview to work!")
   (when (equal this-command #'start)
     (add-hook 'after-change-functions #'-prepare-timer nil t))
 
-  (if (and (eq major-mode 'org-mode)
-           (-in-latex-p)
-           (not (-has-latex-overlay)))
-      (let ((datum (org-element-context)))
+  (if (and (or (eq major-mode 'org-mode)
+               (eq major-mode 'latex-mode))
+       (-in-latex-p)
+       (not (-has-latex-overlay)))
+      (let ((tex-string (-get-tex-string))
+            (latex-header
+             (concat (s-join "\n" user-latex-definitions)
+                     "\n"
+                     (-get-headers))))
         (setq -current-window (selected-window))
-	(let ((tex-string (org-element-property :value datum))
-              (latex-header
-               (concat (s-join "\n" user-latex-definitions)
-                       "\n"
-                       (plist-get (org-export-get-environment
-                                   (org-export-get-backend 'latex))
-                                  :latex-header))))
-          (setq -is-inline nil)
-          ;; the tex string from latex-fragment includes math delimeters like
-          ;; $, $$, \(\), \[\], and we need to remove them.
-          (when (memq (org-element-type datum) '(latex-fragment))
-            (setq tex-string (-remove-math-delimeter tex-string)))
+        (setq -is-inline nil)
+        ;; the tex string from latex-fragment includes math delimeters like
+        ;; $, $$, \(\), \[\], and we need to remove them.
+        (when (-need-remove-delimeters)
+          (setq tex-string (-remove-math-delimeter tex-string)))
 
-          (setq -position (org-element-property :end datum)
-                ;; set forground color for LaTeX equations.
-                tex-string (concat latex-header (-add-color tex-string)))
-          (if (and -last-tex-string
-                   (equal tex-string -last-tex-string))
-              ;; TeX string is the same, we only need to update posframe
-              ;; position.
-              (when (and -last-position
-                         (equal -position -last-position)
-                         ;; do not force showing posframe when a render
-                         ;; process is running.
-                         (not -process)
-                         (not -force-hidden))
-                (-show))
-            ;; reset `-force-hidden'
-            (setq -force-hidden nil)
-            ;; A new rendering is needed.
-            (-interrupt-rendering)
-            (-render tex-string))))
+        (setq -position (-get-tex-position)
+              ;; set forground color for LaTeX equations.
+              tex-string (concat latex-header (-add-color tex-string)))
+        (if (and -last-tex-string
+                 (equal tex-string -last-tex-string))
+            ;; TeX string is the same, we only need to update posframe
+            ;; position.
+            (when (and -last-position
+                       (equal -position -last-position)
+                       ;; do not force showing posframe when a render
+                       ;; process is running.
+                       (not -process)
+                       (not -force-hidden))
+              (-show))
+          ;; reset `-force-hidden'
+          (setq -force-hidden nil)
+          ;; A new rendering is needed.
+          (-interrupt-rendering)
+          (-render tex-string)))
     ;; Hide posframe when not on LaTeX
     (-hide)))
 
