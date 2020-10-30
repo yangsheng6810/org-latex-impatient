@@ -1,5 +1,5 @@
 #+TITLE: org-latex-instant-preview
-=Org-latex-instant-preview= provides instant preview of LaTeX snippets via MathJax outputed SVG. Unlike [[https://github.com/fuxialexander/emacs-webkit-katex-render][webkit-katex-render]], this does not need xwidget support.
+=Org-latex-instant-preview= provides instant preview of LaTeX snippets via MathJax outputed SVG. Unlike [[https://github.com/fuxialexander/emacs-webkit-katex-render][webkit-katex-render]], this does not need xwidget support. Currently we support =org-mode=. Support for =latex-mode= is experimental and under construction.
 [[file:img/screenshot.png]]
 * Dependencies
   - [[https://github.com/Malabarba/names][Names]]
@@ -40,6 +40,12 @@ npm install mathjax-node-cli
 
 * Known Issue
   - Some SVG files get cropped slightly more than it should. This happens with =librsvg= 2.45 or below. It can also happen on Emacs 28, problem introduced in commit =8f42b94f= and fixed in =b42481e2=. ([[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=44065][bug #44065]])
+  - For ~latex-mode~, currently we do not support customized ~newcommand~ or ~renewcommand~. One workaround is to manually add the definitions to ~org-latex-instant-preview-user-latex-definitions~.
+
+* Future Plans
+  - Add support for ~latex-mode~. There is experimental support, but it does not support any customized commands. Such a support would require either parsing =tex= file, or actually compiling a =tex= file with ~latex/pdflatex/xelatex~.
+  - Use ~latex/pdflatex/xelatex~ for image generation instead of ~mathjax~
+  - Support for scaling in different Emacs versions.
 
 * License
   This piece work is licensed under UNLICENSE.
