@@ -195,7 +195,7 @@ calculated from INFO."
     (format "\\color{%s}{%s}" color ss)))
 
 (defun -in-latex-p ()
-  "Return t if DATUM is in a LaTeX fragment, nil otherwise."
+  "Return t if current point is in a LaTeX fragment, nil otherwise."
   (cond ((eq major-mode 'org-mode)
          (let ((datum (org-element-context)))
            (or (memq (org-element-type datum) '(latex-environment latex-fragment))
@@ -207,7 +207,7 @@ calculated from INFO."
            nil)))
 
 (defun -tex-in-latex-p ()
-  "Return t if in LaTeX fragment in LaTeX."
+  "Return t if in LaTeX fragment in `latex-mode', nil otherwise."
   (let ((faces (face-at-point nil t)))
     (or (-contains? faces 'font-latex-math-face)
         (-contains? faces 'preview-face))))
