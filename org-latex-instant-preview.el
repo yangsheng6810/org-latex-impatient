@@ -153,7 +153,8 @@ calculated from INFO."
   (when -process
     (kill-process -process))
   (when (get-buffer -output-buffer)
-    (kill-buffer -output-buffer))
+    (let ((kill-buffer-query-functions nil))
+      (kill-buffer -output-buffer)))
   (setq -process nil
         -last-tex-string nil
         -last-position nil
@@ -363,7 +364,9 @@ Showing at point END"
                (progn
                  (-fill-posframe-buffer)
                  (-show)
-                 (kill-buffer -output-buffer))
+                 (when (get-buffer -output-buffer)
+                   (let ((kill-buffer-query-functions nil))
+                     (kill-buffer -output-buffer))))
              (error nil))
            ;; ensure -process is reset
            (setq -process nil)))))
