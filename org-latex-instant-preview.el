@@ -388,8 +388,9 @@ Showing at point END"
     (unless (get-buffer -posframe-buffer)
       (get-buffer-create -posframe-buffer))
     ;; when compile error, ss is exactly the error message, so we do nothing.
-    ;; Otherwise when compile succeed, do some hacks
-    (when (s-contains-p "svg" ss)
+    ;; Otherwise when compile succeed and need scaling, do some hacks
+    (when (and (s-contains-p "svg" ss)
+               (not (equal scale 1.0)))
       (setq ss
             (concat
              ;; 100% seems wierd
