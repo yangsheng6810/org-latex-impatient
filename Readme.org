@@ -40,6 +40,7 @@ npm install mathjax-node-cli
 
 * Known Issue
   - Some SVG files get cropped slightly more than it should. This happens with =librsvg= 2.45 or below. It can also happen on Emacs 28, problem introduced in commit =8f42b94f= and fixed in =b42481e2=. ([[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=44065][bug #44065]])
+  - Some report problem of showing scaled SVG on Mac OSX. A workaround is to avoid customization of ~org-latex-instant-preview-scale~.
   - For ~latex-mode~, currently we do not support customized ~newcommand~ or ~renewcommand~. One workaround is to manually add the definitions to ~org-latex-instant-preview-user-latex-definitions~.
 
 * Future Plans
