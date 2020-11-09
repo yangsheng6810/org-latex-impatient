@@ -17,6 +17,20 @@
 ;;  This package provides instant preview of LaTeX snippets via MathJax outputed
 ;;  SVG.
 ;;
+;;; License:
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;; Code:
 ;;;
 
@@ -31,7 +45,7 @@
 ;; Workaround for defvar-local problem in names.el
 (eval-when-compile
   (unless (fboundp 'names--convert-defvar-local)
-    (defalias 'names--convert-defvar-local 'names--convert-defvar
+    (defalias 'names--convert-defvar-local #'names--convert-defvar
       "Special treatment for `defvar-local' FORM.")))
 
 ;; Additional posframe poshandler
@@ -43,9 +57,7 @@ Get a position which let posframe stay right below current
 position, centered in the current window. The structure of INFO
 can be found in docstring of `posframe-show'."
     (let* ((window-left (plist-get info :parent-window-left))
-           (window-top (plist-get info :parent-window-top))
            (window-width (plist-get info :parent-window-width))
-           (window-height (plist-get info :parent-window-height))
            (posframe-width (plist-get info :posframe-width))
            (posframe-height (plist-get info :posframe-height))
            (mode-line-height (plist-get info :mode-line-height))
@@ -61,7 +73,7 @@ can be found in docstring of `posframe-show'."
                      header-line-height
                      (- (or (cdr (posn-x-y position-info)) 0)
                         ;; Fix the conflict with flycheck
-                        ;; http://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
+                        ;; https://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
                         (or (cdr (posn-object-x-y position-info)) 0))
                      y-pixel-offset))
            (font-height (plist-get info :font-height))
@@ -458,8 +470,7 @@ Showing at point END"
       (progn
         (setq -output-buffer
               (concat -output-buffer-prefix (buffer-name)))
-        (add-hook 'post-command-hook #'-prepare-timer nil t)
-        )
+        (add-hook 'post-command-hook #'-prepare-timer nil t))
     (remove-hook 'post-command-hook #'-prepare-timer t)
     (stop)))
 

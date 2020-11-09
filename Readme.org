@@ -49,4 +49,4 @@ npm install mathjax-node-cli
   - Support for scaling in different Emacs versions.
 
 * License
-  This piece work is licensed under UNLICENSE.
+  This piece work is licensed under GPLv3.
