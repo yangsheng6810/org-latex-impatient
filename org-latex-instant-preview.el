@@ -45,7 +45,7 @@
 ;; Workaround for defvar-local problem in names.el
 (eval-when-compile
   (unless (fboundp 'names--convert-defvar-local)
-    (defalias 'names--convert-defvar-local 'names--convert-defvar
+    (defalias 'names--convert-defvar-local #'names--convert-defvar
       "Special treatment for `defvar-local' FORM.")))
 
 ;; Additional posframe poshandler
@@ -57,9 +57,7 @@ Get a position which let posframe stay right below current
 position, centered in the current window. The structure of INFO
 can be found in docstring of `posframe-show'."
     (let* ((window-left (plist-get info :parent-window-left))
-           (window-top (plist-get info :parent-window-top))
            (window-width (plist-get info :parent-window-width))
-           (window-height (plist-get info :parent-window-height))
            (posframe-width (plist-get info :posframe-width))
            (posframe-height (plist-get info :posframe-height))
            (mode-line-height (plist-get info :mode-line-height))
@@ -75,7 +73,7 @@ can be found in docstring of `posframe-show'."
                      header-line-height
                      (- (or (cdr (posn-x-y position-info)) 0)
                         ;; Fix the conflict with flycheck
-                        ;; http://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
+                        ;; https://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
                         (or (cdr (posn-object-x-y position-info)) 0))
                      y-pixel-offset))
            (font-height (plist-get info :font-height))
@@ -468,8 +466,7 @@ Showing at point END"
       (progn
         (setq -output-buffer
               (concat -output-buffer-prefix (buffer-name)))
-        (add-hook 'post-command-hook #'-prepare-timer nil t)
-        )
+        (add-hook 'post-command-hook #'-prepare-timer nil t))
     (remove-hook 'post-command-hook #'-prepare-timer t)
     (stop)))
 
