@@ -355,7 +355,8 @@ for instant preview to work!")
   "Render TEX-STRING to buffer, async version.
 
 Showing at point END"
-  (message "Instant LaTeX rendering")
+  (let (message-log-max)
+    (message "Instant LaTeX rendering"))
   (-interrupt-rendering)
   (setq -last-tex-string tex-string)
   (setq -last-position -position)
@@ -386,7 +387,8 @@ Showing at point END"
 (defun -insert-into-posframe-buffer (ss)
   "Insert SS into posframe buffer."
   (buffer-disable-undo -posframe-buffer)
-  (let ((inhibit-message t))
+  (let ((inhibit-message t)
+        (message-log-max nil))
     (with-current-buffer -posframe-buffer
       (image-mode-as-text)
       (erase-buffer)
@@ -449,9 +451,10 @@ Showing at point END"
   (when (get-buffer -posframe-buffer)
     (setq -last-preview
           (with-current-buffer -posframe-buffer
-            (let ((inhibit-message t))
+            (let ((inhibit-message t)
+                  (message-log-max nil))
               (image-mode-as-text)
-              (buffer-string))))
+              (buffer-substring-no-properties (point-min) (point-max)))))
     (kill-buffer -posframe-buffer)))
 
 (defun abort-preview ()
