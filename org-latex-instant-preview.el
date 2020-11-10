@@ -269,7 +269,7 @@ calculated from INFO."
          (let ((datum (org-element-context)))
            (memq (org-element-type datum) '(latex-fragment))))
         ((eq major-mode 'latex-mode)
-         (message "Not implemente.")
+         (message "Not implemented.")
          t)
         (t "")))
 
