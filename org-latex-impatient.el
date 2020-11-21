@@ -42,37 +42,38 @@
 (require 'org-element)
 
 ;; Additional posframe poshandler
-(unless (fboundp 'posframe-poshandler-point-window-center)
-  (defun posframe-poshandler-point-window-center (info)
-    "Posframe's position handler.
+(eval-and-compile
+  (unless (fboundp 'posframe-poshandler-point-window-center)
+    (defun posframe-poshandler-point-window-center (info)
+      "Posframe's position handler.
 
 Get a position which let posframe stay right below current
 position, centered in the current window. The structure of INFO
 can be found in docstring of `posframe-show'."
-    (let* ((window-left (plist-get info :parent-window-left))
-           (window-width (plist-get info :parent-window-width))
-           (posframe-width (plist-get info :posframe-width))
-           (posframe-height (plist-get info :posframe-height))
-           (y-pixel-offset (plist-get info :y-pixel-offset))
-           (ymax (plist-get info :parent-frame-height))
-           (window (plist-get info :parent-window))
-           (position-info (plist-get info :position-info))
-           (header-line-height (plist-get info :header-line-height))
-           (tab-line-height (plist-get info :tab-line-height))
-           (y-top (+ (cadr (window-pixel-edges window))
-                     tab-line-height
-                     header-line-height
-                     (- (or (cdr (posn-x-y position-info)) 0)
-                        ;; Fix the conflict with flycheck
-                        ;; https://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
-                        (or (cdr (posn-object-x-y position-info)) 0))
-                     y-pixel-offset))
-           (font-height (plist-get info :font-height))
-           (y-bottom (+ y-top font-height)))
-      (cons (+ window-left (/ (- window-width posframe-width) 2))
-            (max 0 (if (> (+ y-bottom (or posframe-height 0)) ymax)
-                       (- y-top (or posframe-height 0))
-                     y-bottom))))))
+      (let* ((window-left (plist-get info :parent-window-left))
+             (window-width (plist-get info :parent-window-width))
+             (posframe-width (plist-get info :posframe-width))
+             (posframe-height (plist-get info :posframe-height))
+             (y-pixel-offset (plist-get info :y-pixel-offset))
+             (ymax (plist-get info :parent-frame-height))
+             (window (plist-get info :parent-window))
+             (position-info (plist-get info :position-info))
+             (header-line-height (plist-get info :header-line-height))
+             (tab-line-height (plist-get info :tab-line-height))
+             (y-top (+ (cadr (window-pixel-edges window))
+                       tab-line-height
+                       header-line-height
+                       (- (or (cdr (posn-x-y position-info)) 0)
+                          ;; Fix the conflict with flycheck
+                          ;; https://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
+                          (or (cdr (posn-object-x-y position-info)) 0))
+                       y-pixel-offset))
+             (font-height (plist-get info :font-height))
+             (y-bottom (+ y-top font-height)))
+        (cons (+ window-left (/ (- window-width posframe-width) 2))
+              (max 0 (if (> (+ y-bottom (or posframe-height 0)) ymax)
+                         (- y-top (or posframe-height 0))
+                       y-bottom)))))))
 
 (defcustom org-latex-impatient-tex2svg-bin ""
   "Location of tex2svg executable."
@@ -278,7 +279,7 @@ calculated from INFO."
                (executable-find org-latex-impatient-tex2svg-bin))
     (message "You need to set org-latex-impatient-tex2svg-bin
 for instant preview to work!")
-    (error "org-latex-impatient-tex2svg-bin is not set correctly"))
+    (error "Variable org-latex-impatient-tex2svg-bin is not set correctly"))
 
   ;; Only used for manual start
   (when (equal this-command #'org-latex-impatient-start)
