@@ -1,5 +1,5 @@
-#+TITLE: org-latex-instant-preview
-=Org-latex-instant-preview= provides instant preview of LaTeX snippets via MathJax outputed SVG. Unlike [[https://github.com/fuxialexander/emacs-webkit-katex-render][webkit-katex-render]], this does not need xwidget support. Currently we support =org-mode=. Support for =latex-mode= is experimental and under construction.
+#+TITLE: org-latex-impatient
+=org-latex-impatient= provides instant preview of LaTeX snippets via MathJax outputed SVG. Unlike [[https://github.com/fuxialexander/emacs-webkit-katex-render][webkit-katex-render]], this does not need xwidget support. Currently we support =org-mode=. Support for =latex-mode= is experimental and under construction.
 [[file:img/screenshot.png]]
 * Dependencies
   - [[https://github.com/Malabarba/names][Names]]
@@ -12,36 +12,36 @@
   #+BEGIN_SRC shell
 npm install mathjax-node-cli
   #+END_SRC
-  You need to set ~org-latex-instant-preview-tex2svg-bin~ to the location of the executable ~tex2svg~.
+  You need to set ~org-latex-impatient-tex2svg-bin~ to the location of the executable ~tex2svg~.
 
 * Usage
    #+begin_src emacs-lisp
-(use-package org-latex-instant-preview
+(use-package org-latex-impatient
   :defer t
-  :hook (org-mode . org-latex-instant-preview-mode)
+  :hook (org-mode . org-latex-impatient-mode)
   :init
-  (setq org-latex-instant-preview-tex2svg-bin
+  (setq org-latex-impatient-tex2svg-bin
         ;; location of tex2svg executable
         "~/node_modules/mathjax-node-cli/bin/tex2svg"))
    #+end_src
-   Or just enable minor mode ~org-latex-instant-preview-mode~ manually when it is needed.
+   Or just enable minor mode ~org-latex-impatient-mode~ manually when it is needed.
    [[file:img/with_mode.gif]]
 
 * Customization
-   - ~org-latex-instant-preview-delay~: change the number of seconds to wait before re-compilation after Emacs is idle. Default to be 0.1.
-   - ~org-latex-instant-preview-tex2svg-bin~:  set the location of ~tex2svg~ executable.
-   - ~org-latex-instant-preview-scale~: set the scale of the preview. Due to limitations in the way Emacs handles SVG pictures, it is implemented by manipulating SVG directly.
-   - ~org-latex-instant-preview-posframe-position-handler~: set the posframe position handler.
-       You might want to use ~posframe-poshandler-point-bottom-left-corner~ for showing it using the end point of the current LaTeX fragment, or ~posframe-poshandler-point-window-center~ for a position centering right below the end point. Default value is ~org-latex-instant-preview-poshandler~, which uses end point of current LaTeX fragment for inline math, and centering right below the end point otherwise. Check the documentation of ~posframe-show~ for other options.
-   - ~org-latex-instant-preview-user-latex-definitions~: custom LaTeX definitions used in the preview. Should be a list of strings. Default: ~'("\\newcommand{\\ensuremath}[1]{#1}")~, which handles ~\ensuremath~ correctly for =MathJax=. In general, it is recommended to add your custom LaTeX command via the following:
+   - ~org-latex-impatient-delay~: change the number of seconds to wait before re-compilation after Emacs is idle. Default to be 0.1.
+   - ~org-latex-impatient-tex2svg-bin~:  set the location of ~tex2svg~ executable.
+   - ~org-latex-impatient-scale~: set the scale of the preview. Due to limitations in the way Emacs handles SVG pictures, it is implemented by manipulating SVG directly.
+   - ~org-latex-impatient-posframe-position-handler~: set the posframe position handler.
+       You might want to use ~posframe-poshandler-point-bottom-left-corner~ for showing it using the end point of the current LaTeX fragment, or ~posframe-poshandler-point-window-center~ for a position centering right below the end point. Default value is ~org-latex-impatient-poshandler~, which uses end point of current LaTeX fragment for inline math, and centering right below the end point otherwise. Check the documentation of ~posframe-show~ for other options.
+   - ~org-latex-impatient-user-latex-definitions~: custom LaTeX definitions used in the preview. Should be a list of strings. Default: ~'("\\newcommand{\\ensuremath}[1]{#1}")~, which handles ~\ensuremath~ correctly for =MathJax=. In general, it is recommended to add your custom LaTeX command via the following:
      #+BEGIN_SRC org
 ,#+LATEX_HEADER: \newcommand{\someNewCommand}{Some Definition}
      #+END_SRC                                                                                                                                                                                                     
 
 * Known Issue
   - Some SVG files get cropped slightly more than it should. This happens with =librsvg= 2.45 or below. It can also happen on Emacs 28, problem introduced in commit =8f42b94f= and fixed in =b42481e2=. ([[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=44065][bug #44065]])
-  - Some report problem of showing scaled SVG on Mac OSX. A workaround is to avoid customization of ~org-latex-instant-preview-scale~.
-  - For ~latex-mode~, currently we do not support customized ~newcommand~ or ~renewcommand~. One workaround is to manually add the definitions to ~org-latex-instant-preview-user-latex-definitions~.
+  - Some report problem of showing scaled SVG on Mac OSX. A workaround is to avoid customization of ~org-latex-impatient-scale~.
+  - For ~latex-mode~, currently we do not support customized ~newcommand~ or ~renewcommand~. One workaround is to manually add the definitions to ~org-latex-impatient-user-latex-definitions~.
 
 * Future Plans
   - Add support for ~latex-mode~. There is experimental support, but it does not support any customized commands. Such a support would require either parsing =tex= file, or actually compiling a =tex= file with ~latex/pdflatex/xelatex~.
