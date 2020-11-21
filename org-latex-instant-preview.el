@@ -1,4 +1,4 @@
-;;; org-latex-instant-preview.el --- Preview org-latex Fragments Instantly via MathJax -*- lexical-binding: t; -*-
+;;; org-latex-impatient.el --- Preview org-latex Fragments Instantly via MathJax -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2020 Sheng Yang
 ;;
@@ -34,19 +34,12 @@
 ;;; Code:
 ;;;
 
-(eval-when-compile (require 'names))
 (require 'image-mode)
 (require 's)
 (require 'dash)
 (require 'org)
 (require 'posframe)
 (require 'org-element)
-
-;; Workaround for defvar-local problem in names.el
-(eval-when-compile
-  (unless (fboundp 'names--convert-defvar-local)
-    (defalias 'names--convert-defvar-local #'names--convert-defvar
-      "Special treatment for `defvar-local' FORM.")))
 
 ;; Additional posframe poshandler
 (unless (fboundp 'posframe-poshandler-point-window-center)
@@ -83,131 +76,126 @@ can be found in docstring of `posframe-show'."
                        (- y-top (or posframe-height 0))
                      y-bottom))))))
 
-;;;###autoload
-(define-namespace org-latex-instant-preview-
-;; (defgroup org-latex-instant-preview nil
-;;   "Instant preview for org LaTeX snippets.")
-
-(defcustom tex2svg-bin ""
+(defcustom org-latex-impatient-tex2svg-bin ""
   "Location of tex2svg executable."
   :group 'org-latex-instant-preview
   :type '(string))
 
-(defcustom delay 0.1
+(defcustom org-latex-impatient-delay 0.1
   "Number of seconds to wait before a re-compilation."
   :group 'org-latex-instant-preview
   :type '(number))
 
-(defcustom scale 1.0
+(defcustom org-latex-impatient-scale 1.0
   "Scale of preview."
   :group 'org-latex-instant-preview
   :type '(float))
 
-(defcustom border-color "black"
+(defcustom org-latex-impatient-border-color "black"
   "Color of preview border."
   :group 'org-latex-instant-preview
   :type '(color))
 
-(defcustom border-width 1
+(defcustom org-latex-impatient-border-width 1
   "Width of preview border."
   :group 'org-latex-instant-preview
   :type '(integer))
 
-(defcustom user-latex-definitions
+(defcustom org-latex-impatient-user-latex-definitions
   '("\\newcommand{\\ensuremath}[1]{#1}")
   "Custom LaTeX definitions used in preview."
   :group 'org-latex-instant-preview
   :type '(repeat string))
 
-(defcustom posframe-position-handler
+(defcustom org-latex-impatient-posframe-position-handler
   #'poshandler
   "The handler for posframe position."
   :group 'org-latex-instant-preview
   :type '(function))
 
-(defconst -output-buffer-prefix "*org-latex-instant-preview*"
+(defconst org-latex-impatient--output-buffer-prefix "*org-latex-impatient*"
   "Prefix for buffer to hold the output.")
 
-(defconst -posframe-buffer "*org-latex-instant-preview*"
+(defconst org-latex-impatient--posframe-buffer "*org-latex-impatient*"
   "Buffer to hold the preview.")
 
-(defvar keymap
+(defvar org-latex-impatient-keymap
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-g" #'abort-preview)
+    (define-key map "\C-g" #'org-latex-impatient-abort-preview)
     map)
   "Keymap for reading input.")
 
-(defvar -process nil)
-(defvar -timer nil)
-(defvar-local -last-tex-string nil)
-(defvar-local -last-position nil)
-(defvar-local -position nil)
-(defvar-local -last-preview nil)
-(defvar-local -current-window nil)
-(defvar-local -output-buffer nil)
-(defvar-local -is-inline nil)
-(defvar-local -force-hidden nil)
+(defvar org-latex-impatient--process nil)
+(defvar org-latex-impatient--timer nil)
+(defvar-local org-latex-impatient--last-tex-string nil)
+(defvar-local org-latex-impatient--last-position nil)
+(defvar-local org-latex-impatient--position nil)
+(defvar-local org-latex-impatient--last-preview nil)
+(defvar-local org-latex-impatient--current-window nil)
+(defvar-local org-latex-impatient--output-buffer nil)
+(defvar-local org-latex-impatient--is-inline nil)
+(defvar-local org-latex-impatient--force-hidden nil)
 
 
-(defun poshandler (info)
+(defun org-latex-impatient-poshandler (info)
   "Default position handler for posframe.
 
 Uses the end point of the current LaTeX fragment for inline math,
 and centering right below the end point otherwise. Position are
 calculated from INFO."
-  (if -is-inline
+  (if org-latex-impatient--is-inline
       (posframe-poshandler-point-bottom-left-corner info)
     (posframe-poshandler-point-window-center info)))
 
-(defun -clean-up ()
+(defun org-latex-impatient--clean-up ()
   "Clean up timer, process, and variables."
-  (-hide)
-  (when -process
-    (kill-process -process))
-  (when (get-buffer -output-buffer)
+  (org-latex-impatient--hide)
+  (when org-latex-impatient--process
+    (kill-process org-latex-impatient--process))
+  (when (get-buffer org-latex-impatient--output-buffer)
     (let ((kill-buffer-query-functions nil))
       (kill-buffer -output-buffer)))
-  (setq -process nil
-        -last-tex-string nil
-        -last-position nil
-        -current-window nil))
+  (setq org-latex-impatient--process nil
+        org-latex-impatient--last-tex-string nil
+        org-latex-impatient--last-position nil
+        org-latex-impatient--current-window nil))
 
 :autoload
-(defun stop ()
+(defun org-latex-impatient-stop ()
   "Stop instant preview of LaTeX snippets."
   (interactive)
   ;; only needed for manual start/stop
-  (remove-hook 'after-change-functions #'-prepare-timer t)
-  (-hide)
-  (-interrupt-rendering))
+  (remove-hook 'after-change-functions #'org-latex-impatient--prepare-timer t)
+  (org-latex-impatient--hide)
+  (org-latex-impatient--interrupt-rendering))
 
-(defun -prepare-timer (&rest _)
+(defun org-latex-impatient--prepare-timer (&rest _)
   "Prepare timer to call re-compilation."
-  (when -timer
-    (cancel-timer -timer)
-    (setq -timer nil))
+  (when org-latex-impatient--timer
+    (cancel-timer org-latex-impatient--timer)
+    (setq org-latex-impatient--timer nil))
   (if (and (or (eq major-mode 'org-mode)
                (eq major-mode 'latex-mode))
-           (-in-latex-p))
-      (setq -timer
-            (run-with-idle-timer delay nil #'start))
-    (-hide)))
+           (org-latex-impatient--in-latex-p))
+      (setq org-latex-impatient--timer
+            (run-with-idle-timer org-latex-impatient-delay nil #'org-latex-impatient-start))
+    (org-latex-impatient--hide)))
 
-(defun -remove-math-delimeter (ss)
+(defun org-latex-impatient--remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
-  (setq -is-inline
+  (setq org-latex-impatient--is-inline
         (or (s-starts-with? "\\(" ss)
             (s-starts-with? "$" ss)))
   (s-with ss
     (s-chop-prefixes '("$$" "\\(" "$" "\\["))
     (s-chop-suffixes '("$$" "\\)" "$" "\\]"))))
 
-(defun -add-color (ss)
+(defun org-latex-impatient--add-color (ss)
   "Wrap SS with color from default face."
   (let ((color (face-foreground 'default)))
     (format "\\color{%s}{%s}" color ss)))
 
-(defun -in-latex-p ()
+(defun org-latex-impatient--in-latex-p ()
   "Return t if current point is in a LaTeX fragment, nil otherwise."
   (cond ((eq major-mode 'org-mode)
          (let ((datum (org-element-context)))
@@ -215,23 +203,23 @@ calculated from INFO."
                (and (memq (org-element-type datum) '(export-block))
                     (equal (org-element-property :type datum) "LATEX")))))
         ((eq major-mode 'latex-mode)
-         (-tex-in-latex-p))
+         (org-latex-impatient--tex-in-latex-p))
         (t (message "We only support org-mode and latex-mode")
            nil)))
 
-(defun -tex-in-latex-p ()
+(defun org-latex-impatient--tex-in-latex-p ()
   "Return t if in LaTeX fragment in `latex-mode', nil otherwise."
   (let ((faces (face-at-point nil t)))
     (or (-contains? faces 'font-latex-math-face)
         (-contains? faces 'preview-face))))
 
-(defun -has-latex-overlay ()
+(defun org-latex-impatient--has-latex-overlay ()
   "Return t if there is LaTeX overlay showing."
   (--first (or (overlay-get it 'xenops-overlay-type)
                (equal 'org-latex-overlay (overlay-get it 'org-overlay-type)))
            (append (overlays-at (point)) (overlays-at (1- (point))))))
 
-(defun -get-tex-string ()
+(defun org-latex-impatient--get-tex-string ()
   "Return the string of LaTeX fragment."
   (cond ((eq major-mode 'org-mode)
          (let ((datum (org-element-context)))
@@ -239,11 +227,11 @@ calculated from INFO."
         ((eq major-mode 'latex-mode)
          (let (begin end)
            (save-excursion
-             (while (-tex-in-latex-p)
+             (while (org-latex-impatient--tex-in-latex-p)
                (backward-char))
              (setq begin (1+ (point))))
            (save-excursion
-             (while (-tex-in-latex-p)
+             (while (org-latex-impatient--tex-in-latex-p)
                (forward-char))
              (setq end (point)))
            (let ((ss (buffer-substring-no-properties begin end)))
@@ -251,19 +239,19 @@ calculated from INFO."
              ss)))
         (t "")))
 
-(defun -get-tex-position ()
+(defun org-latex-impatient--get-tex-position ()
   "Return the end position of LaTeX fragment."
   (cond ((eq major-mode 'org-mode)
          (let ((datum (org-element-context)))
            (org-element-property :end datum)))
         ((eq major-mode 'latex-mode)
          (save-excursion
-           (while (-tex-in-latex-p)
+           (while (org-latex-impatient--tex-in-latex-p)
              (forward-char))
            (point)))
         (t (message "Only org-mode and latex-mode supported") nil)))
 
-(defun -need-remove-delimeters ()
+(defun org-latex-impatient--need-remove-delimeters ()
   "Return t if need to remove delimeters."
   (cond ((eq major-mode 'org-mode)
          (let ((datum (org-element-context)))
@@ -273,7 +261,7 @@ calculated from INFO."
          t)
         (t "")))
 
-(defun -get-headers ()
+(defun org-latex-impatient--get-headers ()
   "Return a string of headers."
   (cond ((eq major-mode 'org-mode)
          (plist-get (org-export-get-environment
@@ -285,126 +273,128 @@ calculated from INFO."
         (t "")))
 
 :autoload
-(defun start (&rest _)
+(defun org-latex-impatient-start (&rest _)
   "Start instant preview."
   (interactive)
-  (unless (and (not (string= tex2svg-bin ""))
-               (executable-find tex2svg-bin))
+  (unless (and (not (string= org-latex-impatient-tex2svg-bin ""))
+               (executable-find org-latex-impatient-tex2svg-bin))
     (message "You need to set org-latex-instant-preview-tex2svg-bin
 for instant preview to work!")
     (error "Org-latex-instant-preview-tex2svg-bin is not set correctly"))
 
   ;; Only used for manual start
-  (when (equal this-command #'start)
-    (add-hook 'after-change-functions #'-prepare-timer nil t))
+  (when (equal this-command #'org-latex-impatient-start)
+    (add-hook 'after-change-functions #'org-latex-impatient--prepare-timer nil t))
 
   (if (and (or (eq major-mode 'org-mode)
                (eq major-mode 'latex-mode))
-       (-in-latex-p)
-       (not (-has-latex-overlay)))
-      (let ((tex-string (-get-tex-string))
+       (org-latex-impatient--in-latex-p)
+       (not (org-latex-impatient--has-latex-overlay)))
+      (let ((tex-string (org-latex-impatient--get-tex-string))
             (latex-header
-             (concat (s-join "\n" user-latex-definitions)
+             (concat (s-join "\n" org-latex-impatient-user-latex-definitions)
                      "\n"
-                     (-get-headers))))
-        (setq -current-window (selected-window))
-        (setq -is-inline nil)
+                     (org-latex-impatient--get-headers))))
+        (setq org-latex-impatient--current-window (selected-window))
+        (setq org-latex-impatient--is-inline nil)
         ;; the tex string from latex-fragment includes math delimeters like
         ;; $, $$, \(\), \[\], and we need to remove them.
-        (when (-need-remove-delimeters)
-          (setq tex-string (-remove-math-delimeter tex-string)))
+        (when (org-latex-impatient--need-remove-delimeters)
+          (setq tex-string (org-latex-impatient--remove-math-delimeter tex-string)))
 
-        (setq -position (-get-tex-position)
+        (setq org-latex-impatient--position (org-latex-impatient--get-tex-position)
               ;; set forground color for LaTeX equations.
-              tex-string (concat latex-header (-add-color tex-string)))
-        (if (and -last-tex-string
-                 (equal tex-string -last-tex-string))
+              tex-string (concat latex-header
+                                                     (org-latex-impatient--add-color tex-string)))
+        (if (and org-latex-impatient--last-tex-string
+                 (equal tex-string
+                        org-latex-impatient--last-tex-string))
             ;; TeX string is the same, we only need to update posframe
             ;; position.
-            (when (and -last-position
-                       (equal -position -last-position)
+            (when (and org-latex-impatient--last-position
+                       (equal org-latex-impatient--position org-latex-impatient--last-position)
                        ;; do not force showing posframe when a render
                        ;; process is running.
-                       (not -process)
-                       (not -force-hidden))
-              (-show))
+                       (not org-latex-impatient--process)
+                       (not org-latex-impatient--force-hidden))
+              (org-latex-impatient--show))
           ;; reset `-force-hidden'
-          (setq -force-hidden nil)
+          (setq org-latex-impatient--force-hidden nil)
           ;; A new rendering is needed.
-          (-interrupt-rendering)
-          (-render tex-string)))
+          (org-latex-impatient--interrupt-rendering)
+          (org-latex-impatient--render tex-string)))
     ;; Hide posframe when not on LaTeX
-    (-hide)))
+    (org-latex-impatient--hide)))
 
-(defun -interrupt-rendering ()
+(defun org-latex-impatient--interrupt-rendering ()
   "Interrupt current running rendering."
-  (when -process
+  (when org-latex-impatient--process
     (condition-case nil
-        (kill-process -process)
+        (kill-process org-latex-impatient--process)
       (error "Faild to kill process"))
-    (setq -process nil
+    (setq org-latex-impatient--process nil
           ;; last render for tex string is invalid, therefore need to invalid
           ;; its cache
-          -last-tex-string nil
-          -last-preview nil))
-  (when (get-buffer -output-buffer)
+          org-latex-impatient--last-tex-string nil
+          org-latex-impatient--last-preview nil))
+  (when (get-buffer org-latex-impatient--output-buffer)
     (let ((kill-buffer-query-functions nil))
-      (kill-buffer -output-buffer))))
+      (kill-buffer org-latex-impatient--output-buffer))))
 
-(defun -render (tex-string)
+(defun org-latex-impatient--render (tex-string)
   "Render TEX-STRING to buffer, async version.
 
 Showing at point END"
   (let (message-log-max)
     (message "Instant LaTeX rendering"))
   (-interrupt-rendering)
-  (setq -last-tex-string tex-string)
-  (setq -last-position -position)
-  (get-buffer-create -output-buffer)
+  (setq org-latex-impatient--last-tex-string tex-string)
+  (setq org-latex-impatient--last-position org-latex-impatient--position)
+  (get-buffer-create org-latex-impatient--output-buffer)
 
-  (setq -process
+  (setq org-latex-impatient--process
         (make-process
          :name "org-latex-instant-preview"
-         :buffer -output-buffer
-         :command (append (list tex2svg-bin
+         :buffer org-latex-impatient--output-buffer
+         :command (append (list org-latex-impatient-tex2svg-bin
                                 tex-string)
-                          (when -is-inline
+                          (when org-latex-impatient--is-inline
                             '("--inline")))
          ;; :stderr ::my-err-buffer
          :sentinel
          (lambda (&rest _)
            (condition-case nil
                (progn
-                 (-fill-posframe-buffer)
-                 (-show)
-                 (when (get-buffer -output-buffer)
+                 (org-latex-impatient--fill-posframe-buffer)
+                 (org-latex-impatient--show)
+                 (when (get-buffer org-latex-impatient--output-buffer)
                    (let ((kill-buffer-query-functions nil))
-                     (kill-buffer -output-buffer))))
+                     (kill-buffer org-latex-impatient--output-buffer))))
              (error nil))
            ;; ensure -process is reset
-           (setq -process nil)))))
+           (setq org-latex-impatient--process nil)))))
 
-(defun -insert-into-posframe-buffer (ss)
+(defun org-latex-impatient--insert-into-posframe-buffer (ss)
   "Insert SS into posframe buffer."
-  (buffer-disable-undo -posframe-buffer)
+  (buffer-disable-undo org-latex-impatient--posframe-buffer)
   (let ((inhibit-message t)
         (message-log-max nil))
-    (with-current-buffer -posframe-buffer
+    (with-current-buffer org-latex-impatient--posframe-buffer
       (image-mode-as-text)
       (erase-buffer)
       (insert ss)
       (image-mode))))
 
-(defun -fill-posframe-buffer ()
+(defun org-latex-impatient--fill-posframe-buffer ()
   "Write SVG in posframe buffer."
-  (let ((ss (with-current-buffer -output-buffer
+  (let ((ss (with-current-buffer org-latex-impatient--output-buffer
               (buffer-string))))
-    (unless (get-buffer -posframe-buffer)
-      (get-buffer-create -posframe-buffer))
+    (unless (get-buffer org-latex-impatient--posframe-buffer)
+      (get-buffer-create org-latex-impatient--posframe-buffer))
     ;; when compile error, ss is exactly the error message, so we do nothing.
     ;; Otherwise when compile succeed and need scaling, do some hacks
     (when (and (s-contains-p "svg" ss)
-               (not (equal scale 1.0)))
+               (not (equal org-latex-impatient-scale 1.0)))
       (setq ss
             (concat
              ;; 100% seems wierd
@@ -413,43 +403,43 @@ Showing at point END"
              (format "<g transform=\"scale(%s)\">" scale)
              ss
              "</g></svg>")))
-    (-insert-into-posframe-buffer ss)
-    (setq -last-preview ss)))
+    (org-latex-impatient--insert-into-posframe-buffer ss)
+    (setq org-latex-impatient--last-preview ss)))
 
-(defun -show (&optional display-point)
+(defun org-latex-impatient--show (&optional display-point)
   "Show preview posframe at DISPLAY-POINT."
   (unless display-point
-    (setq display-point -position))
+    (setq display-point org-latex-impatient--position))
   (when (and -current-window
              (posframe-workable-p)
              (<= (window-start) display-point (window-end))
-             (not -force-hidden))
-    (unless (get-buffer -posframe-buffer)
-      (get-buffer-create -posframe-buffer)
-      (when (and -last-preview
-                 (not (string= "" -last-preview)))
+             (not org-latex-impatient--force-hidden))
+    (unless (get-buffer org-latex-impatient--posframe-buffer)
+      (get-buffer-create org-latex-impatient--posframe-buffer)
+      (when (and org-latex-impatient--last-preview
+                 (not (string= "" org-latex-impatient--last-preview)))
         ;; use cached preview
-        (-insert-into-posframe-buffer -last-preview)))
-    (let ((temp -is-inline))
-      (with-current-buffer -posframe-buffer
-        (setq -is-inline temp)))
+        (org-latex-impatient--insert-into-posframe-buffer org-latex-impatient--last-preview)))
+    (let ((temp org-latex-impatient--is-inline))
+      (with-current-buffer org-latex-impatient--posframe-buffer
+        (setq org-latex-impatient--is-inline temp)))
 
     ;; handle C-g
-    (define-key keymap (kbd "C-g") #'abort-preview)
-    (posframe-show -posframe-buffer
+    (define-key org-latex-impatient-keymap (kbd "C-g") #'org-latex-impatient-abort-preview)
+    (posframe-show org-latex-impatient--posframe-buffer
                    :position display-point
-                   :poshandler posframe-position-handler
-                   :parent-window -current-window
-                   :internal-border-width border-width
-                   :internal-border-color border-color
+                   :poshandler org-latex-impatient-posframe-position-handler
+                   :parent-window org-latex-impatient--current-window
+                   :internal-border-width org-latex-impatient-border-width
+                   :internal-border-color org-latex-impatient-border-color
                    :hidehandler #'posframe-hidehandler-when-buffer-switch)))
 
-(defun -hide ()
+(defun org-latex-impatient--hide ()
   "Hide preview posframe."
-  (define-key keymap (kbd "C-g") nil)
-  (posframe-hide -posframe-buffer)
-  (when (get-buffer -posframe-buffer)
-    (setq -last-preview
+  (define-key org-latex-impatient-keymap (kbd "C-g") nil)
+  (posframe-hide org-latex-impatient--posframe-buffer)
+  (when (get-buffer org-latex-impatient--posframe-buffer)
+    (setq org-latex-impatient--last-preview
           (with-current-buffer -posframe-buffer
             (let ((inhibit-message t)
                   (message-log-max nil))
@@ -457,27 +447,25 @@ Showing at point END"
               (buffer-substring-no-properties (point-min) (point-max)))))
     (kill-buffer -posframe-buffer)))
 
-(defun abort-preview ()
+(defun org-latex-impatient-abort-preview ()
   "Abort preview."
   (interactive)
-  (-interrupt-rendering)
-  (define-key keymap (kbd "C-g") nil)
-  (setq -force-hidden t)
-  (-hide))
+  (org-latex-impatient--interrupt-rendering)
+  (define-key org-latex-impatient-keymap (kbd "C-g") nil)
+  (setq org-latex-impatient--force-hidden t)
+  (org-latex-impatient--hide))
 
 :autoload
-(define-minor-mode mode
+(define-minor-mode org-latex-impatient-mode
   "Instant preview of LaTeX in org-mode"
   nil nil keymap
-  (if mode
+  (if org-latex-impatient-mode
       (progn
-        (setq -output-buffer
-              (concat -output-buffer-prefix (buffer-name)))
-        (add-hook 'post-command-hook #'-prepare-timer nil t))
-    (remove-hook 'post-command-hook #'-prepare-timer t)
+        (setq org-latex-impatient--output-buffer
+              (concat org-latex-impatient--output-buffer-prefix (buffer-name)))
+        (add-hook 'post-command-hook #'org-latex-impatient--prepare-timer nil t))
+    (remove-hook 'post-command-hook #'org-latex-impatient--prepare-timer t)
     (stop)))
 
-;; end of namespace
-)
-(provide 'org-latex-instant-preview)
-;;; org-latex-instant-preview.el ends here
+(provide 'org-latex-impatient)
+;;; org-latex-impatient.el ends here
