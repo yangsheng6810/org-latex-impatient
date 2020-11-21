@@ -53,9 +53,7 @@ can be found in docstring of `posframe-show'."
            (window-width (plist-get info :parent-window-width))
            (posframe-width (plist-get info :posframe-width))
            (posframe-height (plist-get info :posframe-height))
-           (mode-line-height (plist-get info :mode-line-height))
            (y-pixel-offset (plist-get info :y-pixel-offset))
-           (posframe-height (plist-get info :posframe-height))
            (ymax (plist-get info :parent-frame-height))
            (window (plist-get info :parent-window))
            (position-info (plist-get info :position-info))
@@ -78,39 +76,39 @@ can be found in docstring of `posframe-show'."
 
 (defcustom org-latex-impatient-tex2svg-bin ""
   "Location of tex2svg executable."
-  :group 'org-latex-instant-preview
+  :group 'org-latex-impatient
   :type '(string))
 
 (defcustom org-latex-impatient-delay 0.1
   "Number of seconds to wait before a re-compilation."
-  :group 'org-latex-instant-preview
+  :group 'org-latex-impatient
   :type '(number))
 
 (defcustom org-latex-impatient-scale 1.0
   "Scale of preview."
-  :group 'org-latex-instant-preview
+  :group 'org-latex-impatient
   :type '(float))
 
 (defcustom org-latex-impatient-border-color "black"
   "Color of preview border."
-  :group 'org-latex-instant-preview
+  :group 'org-latex-impatient
   :type '(color))
 
 (defcustom org-latex-impatient-border-width 1
   "Width of preview border."
-  :group 'org-latex-instant-preview
+  :group 'org-latex-impatient
   :type '(integer))
 
 (defcustom org-latex-impatient-user-latex-definitions
   '("\\newcommand{\\ensuremath}[1]{#1}")
   "Custom LaTeX definitions used in preview."
-  :group 'org-latex-instant-preview
+  :group 'org-latex-impatient
   :type '(repeat string))
 
 (defcustom org-latex-impatient-posframe-position-handler
-  #'poshandler
+  #'org-latex-impatient-poshandler
   "The handler for posframe position."
-  :group 'org-latex-instant-preview
+  :group 'org-latex-impatient
   :type '(function))
 
 (defconst org-latex-impatient--output-buffer-prefix "*org-latex-impatient*"
@@ -154,7 +152,7 @@ calculated from INFO."
     (kill-process org-latex-impatient--process))
   (when (get-buffer org-latex-impatient--output-buffer)
     (let ((kill-buffer-query-functions nil))
-      (kill-buffer -output-buffer)))
+      (kill-buffer org-latex-impatient--output-buffer)))
   (setq org-latex-impatient--process nil
         org-latex-impatient--last-tex-string nil
         org-latex-impatient--last-position nil
@@ -278,9 +276,9 @@ calculated from INFO."
   (interactive)
   (unless (and (not (string= org-latex-impatient-tex2svg-bin ""))
                (executable-find org-latex-impatient-tex2svg-bin))
-    (message "You need to set org-latex-instant-preview-tex2svg-bin
+    (message "You need to set org-latex-impatient-tex2svg-bin
 for instant preview to work!")
-    (error "Org-latex-instant-preview-tex2svg-bin is not set correctly"))
+    (error "org-latex-impatient-tex2svg-bin is not set correctly"))
 
   ;; Only used for manual start
   (when (equal this-command #'org-latex-impatient-start)
@@ -347,14 +345,14 @@ for instant preview to work!")
 Showing at point END"
   (let (message-log-max)
     (message "Instant LaTeX rendering"))
-  (-interrupt-rendering)
+  (org-latex-impatient--interrupt-rendering)
   (setq org-latex-impatient--last-tex-string tex-string)
   (setq org-latex-impatient--last-position org-latex-impatient--position)
   (get-buffer-create org-latex-impatient--output-buffer)
 
   (setq org-latex-impatient--process
         (make-process
-         :name "org-latex-instant-preview"
+         :name "org-latex-impatient"
          :buffer org-latex-impatient--output-buffer
          :command (append (list org-latex-impatient-tex2svg-bin
                                 tex-string)
@@ -400,7 +398,7 @@ Showing at point END"
              ;; 100% seems wierd
              "<svg height=\"110%\">"
              ;; ad-hoc for scaling
-             (format "<g transform=\"scale(%s)\">" scale)
+             (format "<g transform=\"scale(%s)\">" org-latex-impatient-scale)
              ss
              "</g></svg>")))
     (org-latex-impatient--insert-into-posframe-buffer ss)
@@ -410,7 +408,7 @@ Showing at point END"
   "Show preview posframe at DISPLAY-POINT."
   (unless display-point
     (setq display-point org-latex-impatient--position))
-  (when (and -current-window
+  (when (and org-latex-impatient--current-window
              (posframe-workable-p)
              (<= (window-start) display-point (window-end))
              (not org-latex-impatient--force-hidden))
@@ -440,12 +438,12 @@ Showing at point END"
   (posframe-hide org-latex-impatient--posframe-buffer)
   (when (get-buffer org-latex-impatient--posframe-buffer)
     (setq org-latex-impatient--last-preview
-          (with-current-buffer -posframe-buffer
+          (with-current-buffer org-latex-impatient--posframe-buffer
             (let ((inhibit-message t)
                   (message-log-max nil))
               (image-mode-as-text)
               (buffer-substring-no-properties (point-min) (point-max)))))
-    (kill-buffer -posframe-buffer)))
+    (kill-buffer org-latex-impatient--posframe-buffer)))
 
 (defun org-latex-impatient-abort-preview ()
   "Abort preview."
@@ -465,7 +463,7 @@ Showing at point END"
               (concat org-latex-impatient--output-buffer-prefix (buffer-name)))
         (add-hook 'post-command-hook #'org-latex-impatient--prepare-timer nil t))
     (remove-hook 'post-command-hook #'org-latex-impatient--prepare-timer t)
-    (stop)))
+    (org-latex-impatient-stop)))
 
 (provide 'org-latex-impatient)
 ;;; org-latex-impatient.el ends here
