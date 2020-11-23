@@ -41,40 +41,6 @@
 (require 'posframe)
 (require 'org-element)
 
-;; Additional posframe poshandler
-(eval-and-compile
-  (unless (fboundp 'posframe-poshandler-point-window-center)
-    (defun posframe-poshandler-point-window-center (info)
-      "Posframe's position handler.
-
-Get a position which let posframe stay right below current
-position, centered in the current window. The structure of INFO
-can be found in docstring of `posframe-show'."
-      (let* ((window-left (plist-get info :parent-window-left))
-             (window-width (plist-get info :parent-window-width))
-             (posframe-width (plist-get info :posframe-width))
-             (posframe-height (plist-get info :posframe-height))
-             (y-pixel-offset (plist-get info :y-pixel-offset))
-             (ymax (plist-get info :parent-frame-height))
-             (window (plist-get info :parent-window))
-             (position-info (plist-get info :position-info))
-             (header-line-height (plist-get info :header-line-height))
-             (tab-line-height (plist-get info :tab-line-height))
-             (y-top (+ (cadr (window-pixel-edges window))
-                       tab-line-height
-                       header-line-height
-                       (- (or (cdr (posn-x-y position-info)) 0)
-                          ;; Fix the conflict with flycheck
-                          ;; https://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
-                          (or (cdr (posn-object-x-y position-info)) 0))
-                       y-pixel-offset))
-             (font-height (plist-get info :font-height))
-             (y-bottom (+ y-top font-height)))
-        (cons (+ window-left (/ (- window-width posframe-width) 2))
-              (max 0 (if (> (+ y-bottom (or posframe-height 0)) ymax)
-                         (- y-top (or posframe-height 0))
-                       y-bottom)))))))
-
 (defcustom org-latex-impatient-tex2svg-bin ""
   "Location of tex2svg executable."
   :group 'org-latex-impatient
@@ -135,16 +101,51 @@ can be found in docstring of `posframe-show'."
 (defvar-local org-latex-impatient--is-inline nil)
 (defvar-local org-latex-impatient--force-hidden nil)
 
-
 (defun org-latex-impatient-poshandler (info)
   "Default position handler for posframe.
 
 Uses the end point of the current LaTeX fragment for inline math,
-and centering right below the end point otherwise. Position are
+and centering right below the end point otherwise. Positions are
 calculated from INFO."
   (if org-latex-impatient--is-inline
       (posframe-poshandler-point-bottom-left-corner info)
-    (posframe-poshandler-point-window-center info)))
+    (if (fboundp 'posframe-poshandler-point-window-center)
+        (posframe-poshandler-point-window-center info)
+      (org-latex-impatient--poshandler-point-window-center info))))
+
+(defun org-latex-impatient--poshandler-point-window-center (info)
+  "Posframe's position handler.
+
+Get a position which let posframe stay right below current
+position, centered in the current window. The structure of INFO
+can be found in docstring of `posframe-show'.
+
+This function will be removed once a similar poshandler is
+available in upstream."
+  (let* ((window-left (plist-get info :parent-window-left))
+         (window-width (plist-get info :parent-window-width))
+         (posframe-width (plist-get info :posframe-width))
+         (posframe-height (plist-get info :posframe-height))
+         (y-pixel-offset (plist-get info :y-pixel-offset))
+         (ymax (plist-get info :parent-frame-height))
+         (window (plist-get info :parent-window))
+         (position-info (plist-get info :position-info))
+         (header-line-height (plist-get info :header-line-height))
+         (tab-line-height (plist-get info :tab-line-height))
+         (y-top (+ (cadr (window-pixel-edges window))
+                   tab-line-height
+                   header-line-height
+                   (- (or (cdr (posn-x-y position-info)) 0)
+                      ;; Fix the conflict with flycheck
+                      ;; https://lists.gnu.org/archive/html/emacs-devel/2018-01/msg00537.html
+                      (or (cdr (posn-object-x-y position-info)) 0))
+                   y-pixel-offset))
+         (font-height (plist-get info :font-height))
+         (y-bottom (+ y-top font-height)))
+    (cons (+ window-left (/ (- window-width posframe-width) 2))
+          (max 0 (if (> (+ y-bottom (or posframe-height 0)) ymax)
+                     (- y-top (or posframe-height 0))
+                   y-bottom)))))
 
 (defun org-latex-impatient--clean-up ()
   "Clean up timer, process, and variables."
