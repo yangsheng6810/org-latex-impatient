@@ -78,6 +78,13 @@
   :group 'org-latex-impatient
   :type '(function))
 
+(defcustom org-latex-impatient-posframe-position
+  'tex-end
+  "The position that will be used by posframe handler."
+  :group 'org-latex-impatient
+  :type '(choice (const :tag "Current Point" point)
+                 (const :tag "End of TeX String" tex-end)))
+
 (defconst org-latex-impatient--output-buffer-prefix "*org-latex-impatient*"
   "Prefix for buffer to hold the output.")
 
@@ -241,15 +248,19 @@ available in upstream."
 
 (defun org-latex-impatient--get-tex-position ()
   "Return the end position of LaTeX fragment."
-  (cond ((eq major-mode 'org-mode)
-         (let ((datum (org-element-context)))
-           (org-element-property :end datum)))
-        ((eq major-mode 'latex-mode)
-         (save-excursion
-           (while (org-latex-impatient--tex-in-latex-p)
-             (forward-char))
-           (point)))
-        (t (message "Only org-mode and latex-mode supported") nil)))
+  (cond ((eq org-latex-impatient-posframe-position 'tex-string)
+         (cond ((eq major-mode 'org-mode)
+                (let ((datum (org-element-context)))
+                  (org-element-property :end datum)))
+               ((eq major-mode 'latex-mode)
+                (save-excursion
+                  (while (org-latex-impatient--tex-in-latex-p)
+                    (forward-char))
+                  (point)))
+               (t (message "Only org-mode and latex-mode supported") nil)))
+        ((eq org-latex-impatient-posframe-position 'point)
+         (point))
+        (t (message "org-latex-impatient-posframe-position set incorrectly"))))
 
 (defun org-latex-impatient--need-remove-delimeters ()
   "Return t if need to remove delimeters."
