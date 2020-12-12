@@ -31,7 +31,7 @@ npm install mathjax-node-cli
    - ~org-latex-impatient-delay~: change the number of seconds to wait before re-compilation after Emacs is idle. Default to be 0.1.
    - ~org-latex-impatient-tex2svg-bin~:  set the location of ~tex2svg~ executable.
    - ~org-latex-impatient-border-color~: border color.
-   - ~org-latex-impatient-border-width~: border width (an integer).
+   - ~org-latex-impatient-border-width~: border width (an integer), 0 will disable border.
    - ~org-latex-impatient-scale~: set the scale of the preview. Due to limitations in the way Emacs handles SVG pictures, it is implemented by manipulating SVG directly.
    - ~org-latex-impatient-posframe-position-handler~: set the posframe position handler.
        You might want to use ~posframe-poshandler-point-bottom-left-corner~ for showing it using the end point of the current LaTeX fragment, or ~posframe-poshandler-point-window-center~ for a position centering right below the end point. Default value is ~org-latex-impatient-poshandler~, which uses end point of current LaTeX fragment for inline math, and centering right below the end point otherwise. Check the documentation of ~posframe-show~ for other options.
