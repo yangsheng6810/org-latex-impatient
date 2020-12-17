@@ -99,7 +99,7 @@
 
 (defvar org-latex-impatient--process nil)
 (defvar org-latex-impatient--timer nil)
-(defvar-local org-latex-impatient--last-tex-string nil)
+(defvar org-latex-impatient--last-tex-string nil)
 (defvar-local org-latex-impatient--last-position nil)
 (defvar-local org-latex-impatient--position nil)
 (defvar-local org-latex-impatient--last-preview nil)
