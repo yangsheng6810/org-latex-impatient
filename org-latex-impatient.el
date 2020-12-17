@@ -248,7 +248,7 @@ available in upstream."
 
 (defun org-latex-impatient--get-tex-position ()
   "Return the end position of LaTeX fragment."
-  (cond ((eq org-latex-impatient-posframe-position 'tex-string)
+  (cond ((eq org-latex-impatient-posframe-position 'tex-end)
          (cond ((eq major-mode 'org-mode)
                 (let ((datum (org-element-context)))
                   (org-element-property :end datum)))
