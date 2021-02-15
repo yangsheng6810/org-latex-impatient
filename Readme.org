@@ -38,6 +38,8 @@ npm install mathjax-node-cli
      #+BEGIN_SRC org
 ,#+LATEX_HEADER: \newcommand{\someNewCommand}{Some Definition}
      #+END_SRC                                                                                                                                                                                                     
+   - ~org-latex-impatient-inhibit-envs~: a list of LaTeX environments. If a LaTeX fragment contains one of them, preview will be disabled. This exists to avoid previewing environments unsupported by MathJax, e.g. =tikzpicture=.
+   - ~org-latex-impatient-inhibit-commands~: a list of LaTeX commands. If a LaTeX fragment contains one of them, preview will be disabled. This exists to avoid previewing commands unsupported by MathJax, e.g. =\tikz=
 
 * Known Issue
   - Some SVG files get cropped slightly more than it should. This happens with =librsvg= 2.45 or below. It can also happen on Emacs 28, problem introduced in commit =8f42b94f= and fixed in =b42481e2=. ([[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=44065][bug #44065]])
@@ -46,7 +48,7 @@ npm install mathjax-node-cli
 
 * Future Plans
   - Add support for ~latex-mode~. There is experimental support, but it does not support any customized commands. Such a support would require either parsing =tex= file, or actually compiling a =tex= file with ~latex/pdflatex/xelatex~.
-  - Use ~latex/pdflatex/xelatex~ for image generation instead of ~mathjax~
+  - Use ~latex/pdflatex/xelatex~ for image generation instead of ~mathjax~. Some progress made, but needs refactoring to make things consistent.
   - Support for scaling in different Emacs versions.
 
 * License

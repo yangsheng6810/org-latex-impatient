@@ -85,6 +85,18 @@
   :type '(choice (const :tag "Current Point" point)
                  (const :tag "End of TeX String" tex-end)))
 
+(defcustom org-latex-impatient-inhibit-envs
+  '("tikzpicture")
+  "List of environments that shall not preview"
+  :group 'org-latex-impatient
+  :type '(repeat string))
+
+(defcustom org-latex-impatient-inhibit-commands
+  '("\\tikz")
+  "List of commands that shall not preview"
+  :group 'org-latex-impatient
+  :type '(repeat string))
+
 (defconst org-latex-impatient--output-buffer-prefix "*org-latex-impatient*"
   "Prefix for buffer to hold the output.")
 
@@ -283,6 +295,18 @@ available in upstream."
          "")
         (t "")))
 
+(defun org-latex-impatient-inhibit (tex-string)
+  "Returns t if we do not want TEX-STRING to preview."
+  ;; checks for tikz
+  (or (s-matches-p
+       (rx-to-string
+        `(: "\\begin{" (or ,@org-latex-impatient-inhibit-envs)))
+       tex-string)
+      (s-matches-p
+       (rx-to-string
+        `(or ,@org-latex-impatient-inhibit-commands))
+       tex-string)))
+
 :autoload
 (defun org-latex-impatient-start (&rest _)
   "Start instant preview."
@@ -306,34 +330,35 @@ for instant preview to work!")
              (concat (s-join "\n" org-latex-impatient-user-latex-definitions)
                      "\n"
                      (org-latex-impatient--get-headers))))
-        (setq org-latex-impatient--current-window (selected-window))
-        (setq org-latex-impatient--is-inline nil)
-        ;; the tex string from latex-fragment includes math delimeters like
-        ;; $, $$, \(\), \[\], and we need to remove them.
-        (when (org-latex-impatient--need-remove-delimeters)
-          (setq tex-string (org-latex-impatient--remove-math-delimeter tex-string)))
+        (unless (org-latex-impatient-inhibit tex-string)
+          (setq org-latex-impatient--current-window (selected-window))
+          (setq org-latex-impatient--is-inline nil)
+          ;; the tex string from latex-fragment includes math delimeters like
+          ;; $, $$, \(\), \[\], and we need to remove them.
+          (when (org-latex-impatient--need-remove-delimeters)
+            (setq tex-string (org-latex-impatient--remove-math-delimeter tex-string)))
 
-        (setq org-latex-impatient--position (org-latex-impatient--get-tex-position)
-              ;; set forground color for LaTeX equations.
-              tex-string (concat latex-header
-                                                     (org-latex-impatient--add-color tex-string)))
-        (if (and org-latex-impatient--last-tex-string
-                 (equal tex-string
-                        org-latex-impatient--last-tex-string))
-            ;; TeX string is the same, we only need to update posframe
-            ;; position.
-            (when (and org-latex-impatient--last-position
-                       (equal org-latex-impatient--position org-latex-impatient--last-position)
-                       ;; do not force showing posframe when a render
-                       ;; process is running.
-                       (not org-latex-impatient--process)
-                       (not org-latex-impatient--force-hidden))
-              (org-latex-impatient--show))
-          ;; reset `-force-hidden'
-          (setq org-latex-impatient--force-hidden nil)
-          ;; A new rendering is needed.
-          (org-latex-impatient--interrupt-rendering)
-          (org-latex-impatient--render tex-string)))
+          (setq org-latex-impatient--position (org-latex-impatient--get-tex-position)
+                ;; set forground color for LaTeX equations.
+                tex-string (concat latex-header
+                                   (org-latex-impatient--add-color tex-string)))
+          (if (and org-latex-impatient--last-tex-string
+                   (equal tex-string
+                          org-latex-impatient--last-tex-string))
+              ;; TeX string is the same, we only need to update posframe
+              ;; position.
+              (when (and org-latex-impatient--last-position
+                         (equal org-latex-impatient--position org-latex-impatient--last-position)
+                         ;; do not force showing posframe when a render
+                         ;; process is running.
+                         (not org-latex-impatient--process)
+                         (not org-latex-impatient--force-hidden))
+                (org-latex-impatient--show))
+            ;; reset `-force-hidden'
+            (setq org-latex-impatient--force-hidden nil)
+            ;; A new rendering is needed.
+            (org-latex-impatient--interrupt-rendering)
+            (org-latex-impatient--render tex-string))))
     ;; Hide posframe when not on LaTeX
     (org-latex-impatient--hide)))
 
