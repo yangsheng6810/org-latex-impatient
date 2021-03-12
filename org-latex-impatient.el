@@ -206,9 +206,10 @@ available in upstream."
 
 (defun org-latex-impatient--remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
-  (setq org-latex-impatient--is-inline
-        (or (s-starts-with? "\\(" ss)
-            (s-starts-with? "$" ss)))
+  (unless org-latex-impatient--is-inline
+    (setq org-latex-impatient--is-inline
+          (or (s-starts-with? "\\(" ss)
+              (s-starts-with? "$" ss))))
   (s-with ss
     (s-chop-prefixes '("$$" "\\(" "$" "\\["))
     (s-chop-suffixes '("$$" "\\)" "$" "\\]"))))
@@ -276,7 +277,10 @@ available in upstream."
            (save-excursion
              (setq end (prop-match-end
                         (text-property--find-end-forward
-                         (point) 'face 'markdown-math-face #'yang/equal-or-member))))
+                         (point) 'face 'markdown-math-face #'yang/equal-or-member)))
+             (unless (looking-at (rx (or "$$" "\\]")))
+               (setq org-latex-impatient--is-inline t)
+               (message "setting is-line to %s" org-latex-impatient--is-inline)))
            (let ((ss (buffer-substring-no-properties begin end)))
              (message "ss is %S" ss)
              ss)))
@@ -309,10 +313,10 @@ available in upstream."
          (let ((datum (org-element-context)))
            (memq (org-element-type datum) '(latex-fragment))))
         ((derived-mode-p 'latex-mode)
-         (message "Not implemented.")
+         ;; (message "Not implemented.")
          t)
         ((derived-mode-p 'markdown-mode)
-         (message "Not implemented.")
+         ;; (message "Not implemented.")
          t)
         (t "")))
 
@@ -323,10 +327,10 @@ available in upstream."
                      (org-export-get-backend 'latex))
                     :latex-header))
         ((derived-mode-p 'latex-mode)
-         (message "Get header not supported in latex-mode yet.")
+         ;; (message "Get header not supported in latex-mode yet.")
          "")
         ((derived-mode-p 'markdown-mode)
-         (message "Get header not supported in markdown-mode yet.")
+         ;; (message "Get header not supported in markdown-mode yet.")
          "")
         (t "")))
 
@@ -361,14 +365,14 @@ for instant preview to work!")
                (derived-mode-p 'markdown-mode))
        (org-latex-impatient--in-latex-p)
        (not (org-latex-impatient--has-latex-overlay)))
-      (let ((tex-string (org-latex-impatient--get-tex-string))
+      (let ((--dummy-- (setq org-latex-impatient--is-inline nil))
+            (tex-string (org-latex-impatient--get-tex-string))
             (latex-header
              (concat (s-join "\n" org-latex-impatient-user-latex-definitions)
                      "\n"
                      (org-latex-impatient--get-headers))))
         (unless (org-latex-impatient-inhibit tex-string)
           (setq org-latex-impatient--current-window (selected-window))
-          (setq org-latex-impatient--is-inline nil)
           ;; the tex string from latex-fragment includes math delimeters like
           ;; $, $$, \(\), \[\], and we need to remove them.
           (when (org-latex-impatient--need-remove-delimeters)
