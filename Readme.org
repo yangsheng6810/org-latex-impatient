@@ -1,5 +1,5 @@
 #+TITLE: org-latex-impatient
-=org-latex-impatient= provides instant preview of LaTeX snippets via MathJax outputed SVG. Unlike [[https://github.com/fuxialexander/emacs-webkit-katex-render][webkit-katex-render]], this does not need xwidget support. Currently we support =org-mode=. Support for =latex-mode= is experimental and under construction.
+=org-latex-impatient= provides instant preview of LaTeX snippets via MathJax outputed SVG. Unlike [[https://github.com/fuxialexander/emacs-webkit-katex-render][webkit-katex-render]], this does not need xwidget support. Currently we support =org-mode= and its derived modes, e.t. =org-journal=. Support for =latex-mode= is experimental and under construction.
 [[file:img/screenshot.png]]
 * Dependencies
   - [[https://github.com/Malabarba/names][Names]]
