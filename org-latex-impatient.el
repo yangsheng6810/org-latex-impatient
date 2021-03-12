@@ -196,7 +196,7 @@ available in upstream."
   (when org-latex-impatient--timer
     (cancel-timer org-latex-impatient--timer)
     (setq org-latex-impatient--timer nil))
-  (if (and (or (eq major-mode 'org-mode)
+  (if (and (or (derived-mode-p 'org-mode)
                (eq major-mode 'latex-mode))
            (org-latex-impatient--in-latex-p))
       (setq org-latex-impatient--timer
@@ -219,7 +219,7 @@ available in upstream."
 
 (defun org-latex-impatient--in-latex-p ()
   "Return t if current point is in a LaTeX fragment, nil otherwise."
-  (cond ((eq major-mode 'org-mode)
+  (cond ((derived-mode-p 'org-mode)
          (let ((datum (org-element-context)))
            (or (memq (org-element-type datum) '(latex-environment latex-fragment))
                (and (memq (org-element-type datum) '(export-block))
@@ -243,7 +243,7 @@ available in upstream."
 
 (defun org-latex-impatient--get-tex-string ()
   "Return the string of LaTeX fragment."
-  (cond ((eq major-mode 'org-mode)
+  (cond ((derived-mode-p 'org-mode)
          (let ((datum (org-element-context)))
            (org-element-property :value datum)))
         ((eq major-mode 'latex-mode)
@@ -264,7 +264,7 @@ available in upstream."
 (defun org-latex-impatient--get-tex-position ()
   "Return the end position of LaTeX fragment."
   (cond ((eq org-latex-impatient-posframe-position 'tex-end)
-         (cond ((eq major-mode 'org-mode)
+         (cond ((derived-mode-p 'org-mode)
                 (let ((datum (org-element-context)))
                   (org-element-property :end datum)))
                ((eq major-mode 'latex-mode)
@@ -279,7 +279,7 @@ available in upstream."
 
 (defun org-latex-impatient--need-remove-delimeters ()
   "Return t if need to remove delimeters."
-  (cond ((eq major-mode 'org-mode)
+  (cond ((derived-mode-p 'org-mode)
          (let ((datum (org-element-context)))
            (memq (org-element-type datum) '(latex-fragment))))
         ((eq major-mode 'latex-mode)
@@ -289,7 +289,7 @@ available in upstream."
 
 (defun org-latex-impatient--get-headers ()
   "Return a string of headers."
-  (cond ((eq major-mode 'org-mode)
+  (cond ((derived-mode-p 'org-mode)
          (plist-get (org-export-get-environment
                      (org-export-get-backend 'latex))
                     :latex-header))
@@ -324,7 +324,7 @@ for instant preview to work!")
   (when (equal this-command #'org-latex-impatient-start)
     (add-hook 'after-change-functions #'org-latex-impatient--prepare-timer nil t))
 
-  (if (and (or (eq major-mode 'org-mode)
+  (if (and (or (derived-mode-p 'org-mode)
                (eq major-mode 'latex-mode))
        (org-latex-impatient--in-latex-p)
        (not (org-latex-impatient--has-latex-overlay)))
