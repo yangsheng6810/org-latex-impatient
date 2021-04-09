@@ -68,7 +68,7 @@
 
 (defcustom org-latex-impatient-user-latex-definitions
   '("\\newcommand{\\ensuremath}[1]{#1}"
-    "\\renewcommand{\\usepackage}[1]{}")
+    "\\renewcommand{\\usepackage}[2][]{}")
   "Custom LaTeX definitions used in preview.
 
 \\usepackage redefined since MathJax does not support it"
