@@ -68,7 +68,7 @@
 
 (defcustom org-latex-impatient-user-latex-definitions
   '("\\newcommand{\\ensuremath}[1]{#1}"
-    "\\renewcommand{\\usepackage}[1]{}")
+    "\\renewcommand{\\usepackage}[2][]{}")
   "Custom LaTeX definitions used in preview.
 
 \\usepackage redefined since MathJax does not support it"
@@ -197,7 +197,8 @@ available in upstream."
     (cancel-timer org-latex-impatient--timer)
     (setq org-latex-impatient--timer nil))
   (if (and (or (derived-mode-p 'org-mode)
-               (eq major-mode 'latex-mode))
+               (derived-mode-p 'latex-mode)
+               (derived-mode-p 'markdown-mode))
            (org-latex-impatient--in-latex-p))
       (setq org-latex-impatient--timer
             (run-with-idle-timer org-latex-impatient-delay nil #'org-latex-impatient-start))
@@ -205,9 +206,10 @@ available in upstream."
 
 (defun org-latex-impatient--remove-math-delimeter (ss)
   "Chop LaTeX delimeters from SS."
-  (setq org-latex-impatient--is-inline
-        (or (s-starts-with? "\\(" ss)
-            (s-starts-with? "$" ss)))
+  (unless org-latex-impatient--is-inline
+    (setq org-latex-impatient--is-inline
+          (or (s-starts-with? "\\(" ss)
+              (s-starts-with? "$" ss))))
   (s-with ss
     (s-chop-prefixes '("$$" "\\(" "$" "\\["))
     (s-chop-suffixes '("$$" "\\)" "$" "\\]"))))
@@ -217,6 +219,11 @@ available in upstream."
   (let ((color (face-foreground 'default)))
     (format "\\color{%s}{%s}" color ss)))
 
+(defun org-latex-impatient--equal-or-member (elm target)
+  (if (listp target)
+      (member elm target)
+    (equal elm target)))
+
 (defun org-latex-impatient--in-latex-p ()
   "Return t if current point is in a LaTeX fragment, nil otherwise."
   (cond ((derived-mode-p 'org-mode)
@@ -224,9 +231,11 @@ available in upstream."
            (or (memq (org-element-type datum) '(latex-environment latex-fragment))
                (and (memq (org-element-type datum) '(export-block))
                     (equal (org-element-property :type datum) "LATEX")))))
-        ((eq major-mode 'latex-mode)
+        ((derived-mode-p 'latex-mode)
          (org-latex-impatient--tex-in-latex-p))
-        (t (message "We only support org-mode and latex-mode")
+        ((derived-mode-p 'markdown-mode)
+         (org-latex-impatient--equal-or-member 'markdown-math-face (get-text-property (point) 'face)))
+        (t (message "We only support org-mode, latex-mode, and markdown-mode")
            nil)))
 
 (defun org-latex-impatient--tex-in-latex-p ()
@@ -246,7 +255,7 @@ available in upstream."
   (cond ((derived-mode-p 'org-mode)
          (let ((datum (org-element-context)))
            (org-element-property :value datum)))
-        ((eq major-mode 'latex-mode)
+        ((derived-mode-p 'latex-mode)
          (let (begin end)
            (save-excursion
              (while (org-latex-impatient--tex-in-latex-p)
@@ -259,6 +268,22 @@ available in upstream."
            (let ((ss (buffer-substring-no-properties begin end)))
              (message "ss is %S" ss)
              ss)))
+        ((derived-mode-p 'markdown-mode)
+         (let (begin end)
+           (save-excursion
+             (setq begin (prop-match-beginning
+                          (text-property--find-end-backward
+                           (point) 'face 'markdown-math-face #'yang/equal-or-member))))
+           (save-excursion
+             (setq end (prop-match-end
+                        (text-property--find-end-forward
+                         (point) 'face 'markdown-math-face #'yang/equal-or-member)))
+             (unless (looking-at (rx (or "$$" "\\]")))
+               (setq org-latex-impatient--is-inline t)
+               (message "setting is-line to %s" org-latex-impatient--is-inline)))
+           (let ((ss (buffer-substring-no-properties begin end)))
+             (message "ss is %S" ss)
+             ss)))
         (t "")))
 
 (defun org-latex-impatient--get-tex-position ()
@@ -267,12 +292,17 @@ available in upstream."
          (cond ((derived-mode-p 'org-mode)
                 (let ((datum (org-element-context)))
                   (org-element-property :end datum)))
-               ((eq major-mode 'latex-mode)
+               ((derived-mode-p 'latex-mode)
                 (save-excursion
                   (while (org-latex-impatient--tex-in-latex-p)
                     (forward-char))
                   (point)))
-               (t (message "Only org-mode and latex-mode supported") nil)))
+               ((derived-mode-p 'markdown-mode)
+                (save-excursion
+                  (prop-match-end
+                   (text-property--find-end-forward
+                    (point) 'face 'markdown-math-face #'yang/equal-or-member))))
+               (t (message "Only org-mode, latex-mode, and markdown-mode supported") nil)))
         ((eq org-latex-impatient-posframe-position 'point)
          (point))
         (t (message "org-latex-impatient-posframe-position set incorrectly"))))
@@ -282,8 +312,11 @@ available in upstream."
   (cond ((derived-mode-p 'org-mode)
          (let ((datum (org-element-context)))
            (memq (org-element-type datum) '(latex-fragment))))
-        ((eq major-mode 'latex-mode)
-         (message "Not implemented.")
+        ((derived-mode-p 'latex-mode)
+         ;; (message "Not implemented.")
+         t)
+        ((derived-mode-p 'markdown-mode)
+         ;; (message "Not implemented.")
          t)
         (t "")))
 
@@ -293,8 +326,11 @@ available in upstream."
          (plist-get (org-export-get-environment
                      (org-export-get-backend 'latex))
                     :latex-header))
-        ((eq major-mode 'latex-mode)
-         (message "Get header not supported in latex-mode yet.")
+        ((derived-mode-p 'latex-mode)
+         ;; (message "Get header not supported in latex-mode yet.")
+         "")
+        ((derived-mode-p 'markdown-mode)
+         ;; (message "Get header not supported in markdown-mode yet.")
          "")
         (t "")))
 
@@ -325,17 +361,18 @@ for instant preview to work!")
     (add-hook 'after-change-functions #'org-latex-impatient--prepare-timer nil t))
 
   (if (and (or (derived-mode-p 'org-mode)
-               (eq major-mode 'latex-mode))
+               (derived-mode-p 'latex-mode)
+               (derived-mode-p 'markdown-mode))
        (org-latex-impatient--in-latex-p)
        (not (org-latex-impatient--has-latex-overlay)))
-      (let ((tex-string (org-latex-impatient--get-tex-string))
+      (let ((--dummy-- (setq org-latex-impatient--is-inline nil))
+            (tex-string (org-latex-impatient--get-tex-string))
             (latex-header
              (concat (s-join "\n" org-latex-impatient-user-latex-definitions)
                      "\n"
                      (org-latex-impatient--get-headers))))
         (unless (org-latex-impatient-inhibit tex-string)
           (setq org-latex-impatient--current-window (selected-window))
-          (setq org-latex-impatient--is-inline nil)
           ;; the tex string from latex-fragment includes math delimeters like
           ;; $, $$, \(\), \[\], and we need to remove them.
           (when (org-latex-impatient--need-remove-delimeters)
