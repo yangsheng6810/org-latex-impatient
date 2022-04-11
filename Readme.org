@@ -54,10 +54,10 @@ If this is the case, you can /ignore/ it by override its definition with a place
 #+end_src
 It is recommended to override top level commands for obvious reasons. Repeat this process for every such command.
 
-Since most LaTeX packages are not relevant in math preview, we assume that *all* package usage are not necessary in producing a preview, and override the ~\usepackage~ call in the header. If this prevents you from using certain commands defined by an external package, add this in the *front* of ~org-latex-impatient-user-latex-definitions~ like the following:
-#+begin_src emacs-lisp
-(add-to-list 'org-latex-impatient-user-latex-definitions "\\usepackage{somepackge}")
-#+end_src
+Since most LaTeX packages are not relevant in math preview, we assume that *all* package usage are not necessary in producing a preview, and override the ~\usepackage~ call in the header. +If this prevents you from using certain commands defined by an external package, add this in the *front* of ~org-latex-impatient-user-latex-definitions~ like the following:+
+# #+begin_src emacs-lisp
+# (add-to-list 'org-latex-impatient-user-latex-definitions "\\usepackage{somepackge}") ;
+# #+end_src
 
 * Known Issue
   - Some SVG files get cropped slightly more than it should. This happens with =librsvg= 2.45 or below. It can also happen on Emacs 28, problem introduced in commit =8f42b94f= and fixed in =b42481e2=. ([[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=44065][bug #44065]])
