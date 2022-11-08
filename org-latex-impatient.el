@@ -534,7 +534,9 @@ Showing at point END"
 :autoload
 (define-minor-mode org-latex-impatient-mode
   "Instant preview of LaTeX in org-mode"
-  nil nil org-latex-impatient-keymap
+  :global nil 
+  :init-value nil 
+  :keymap org-latex-impatient-keymap
   (if org-latex-impatient-mode
       (progn
         (setq org-latex-impatient--output-buffer
