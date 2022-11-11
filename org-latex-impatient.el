@@ -182,7 +182,7 @@ available in upstream."
         org-latex-impatient--last-position nil
         org-latex-impatient--current-window nil))
 
-:autoload
+;;;###autoload
 (defun org-latex-impatient-stop ()
   "Stop instant preview of LaTeX snippets."
   (interactive)
@@ -346,7 +346,7 @@ available in upstream."
         `(or ,@org-latex-impatient-inhibit-commands))
        tex-string)))
 
-:autoload
+;;;###autoload
 (defun org-latex-impatient-start (&rest _)
   "Start instant preview."
   (interactive)
@@ -531,7 +531,7 @@ Showing at point END"
   (setq org-latex-impatient--force-hidden t)
   (org-latex-impatient--hide))
 
-:autoload
+;;;###autoload
 (define-minor-mode org-latex-impatient-mode
   "Instant preview of LaTeX in org-mode"
   :global nil 
